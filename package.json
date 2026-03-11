@@ -1,7 +1,7 @@
 {
   "name": "oprah",
   "version": "5.6.0",
-  "description": "Package to deploy parameters to AWS",
+  "description": "Package to deploy parameters to AWS and Azure",
   "repository": "https://github.com/ACloudGuru/oprah.git",
   "author": "subash adhikari <subash.adhikari@acloud.guru>",
   "engines": {
@@ -13,9 +13,7 @@
     "Patrick Shiel <patrick-shiel@pluralsight.com>"
   ],
   "license": "MIT",
-  "bin": {
-    "oprah": "./bin/oprah"
-  },
+  "bin": "./bin/oprah",
   "scripts": {
     "lint": "yarn eslint .",
     "test": "yarn jest --coverage",
@@ -26,14 +24,18 @@
   "keywords": [
     "amazon-web-services",
     "aws-parameter-store",
+    "azure-key-vault",
     "configuration-management",
-    "aws"
+    "aws",
+    "azure"
   ],
   "bugs": {
     "url": "https://github.com/ACloudGuru/oprah/issues"
   },
   "homepage": "https://github.com/ACloudGuru/oprah",
   "dependencies": {
+    "@azure/identity": "^4.2.0",
+    "@azure/keyvault-secrets": "^4.8.0",
     "aws-sdk": "^2.1407.0",
     "chalk": "^4.1.0",
     "commander": "^7.1.0",
