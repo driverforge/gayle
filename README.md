@@ -1,33 +1,29 @@
-[![Build Status][github-actions-image]][github-actions-url]
-[![codecov](https://codecov.io/gh/ACloudGuru/oprah/branch/master/graph/badge.svg)](https://codecov.io/gh/ACloudGuru/oprah)
-[![Codacy Badge][codacy-image]][codacy-url]
-[![NPM Status][npm-image]][npm-url]
-[![dependencies Status][dependencies-image]][dependencies-url]
+*Originally forked from [@acloudguru/oprah](https://github.com/ACloudGuru/oprah)*
 
-# 🐝 Oprah
+# Gayle
 
-Node module to push configuration and encrypted secrets to AWS.
+Node module to push configuration and encrypted secrets to AWS and Azure.
 
 ## Installation
 
 ```
 # Via yarn
-$ yarn add oprah
+$ yarn add @driverforge/gayle
 
 # Via npm
-$ npm install oprah
+$ npm install @driverforge/gayle
 ```
 
 ## Usage
 
-1. At the root of your application add configuration file called `oprah.yml`.
+1. At the root of your application add configuration file called `gayle.yml`.
 
 ```
-service: oprah-service
+service: my-service
 provider: ssm
 
 config:
-  path: /${stage}/oprah/config
+  path: /${stage}/config
   defaults:
     DB_NAME: my-database
     DB_HOST: 3200
@@ -35,15 +31,15 @@ config:
     DB_TABLE: "some database table name for ${stage}"
 
 secret:
-  path: /${stage}/oprah/secret
+  path: /${stage}/secret
   required:
     DB_PASSWORD: "secret database password"
 ```
 
-2. Use `oprah` CLI tool to push your keys to AWS parameter store.
+2. Use `gayle` CLI tool to push your keys to AWS parameter store.
 
 ```
-$ oprah run --stage <stage> --interactive
+$ gayle run --stage <stage> --interactive
 ```
 
 ### Config File
@@ -51,14 +47,14 @@ $ oprah run --stage <stage> --interactive
 Following is the configuration file will all possible options:
 
 ```
-service: oprah-service
+service: my-service
 provider: ssm                                 # Only supports ssm for now.
 
 stacks:                                       # Outputs from cloudformation stacks that needs to be interpolated.
   - some-cloudformation-stack
 
 config:
-  path: /${stage}/oprah/config                # Base path for params to be added to
+  path: /${stage}/config                      # Base path for params to be added to
   defaults:                                   # Default parameters. Can be overwritten in different environments.
     DB_NAME: my-database
     DB_HOST: 3200
@@ -68,32 +64,32 @@ config:
     DB_TABLE: "some database table name for ${stage}"
 
 secret:
-  keyId: some-arn-of-kms-key-to-use .         # If not specified, default key will be used to encrypt variables.
-  path: /${stage}/oprah/secret                # Base path for params to be added to
+  keyId: some-arn-of-kms-key-to-use           # If not specified, default key will be used to encrypt variables.
+  path: /${stage}/secret                      # Base path for params to be added to
   required:
-    DB_PASSWORD: "secret database password" . # Parameter to encrypt and add to. Will be encrypted using KMS.
-                                              # Above key will be added to /${stage}/oprah/secret/DB_PASSWORD
+    DB_PASSWORD: "secret database password"   # Parameter to encrypt and add to. Will be encrypted using KMS.
+                                              # Above key will be added to /${stage}/secret/DB_PASSWORD
                                               # Value in quote will be displayed as explanation in prompt during interactive run.
 ```
 
 ### CLI
 
-Following is all options available in `oprah` CLI.
+Following is all options available in `gayle` CLI.
 
 ```
-Usage: oprah [options] [command]
+Usage: gayle [options] [command]
 
 Options:
   -V, --version          output the version number
   -s, --stage [stage]    Specify stage to run on. (required)
-  -c, --config [config]  Path to oprah configuration (default: "oprah.yml")
+  -c, --config [config]  Path to gayle configuration (default: "gayle.yml")
   -i, --interactive      specify values through command line
   -h, --help             display help for command
 
 Commands:
   run [options]          Verify or populate all remote configurations and
                          secrets.
-  init                   Initialize oprah. Only required to run once.
+  init                   Initialize gayle. Only required to run once.
   export [options]       Export of all of the configuration from the provider
                          to a text json file
   import [options]       Import all of the configuration from the json from to
@@ -106,7 +102,7 @@ Commands:
 ### Push configuration
 
 ```
-Usage: oprah run [options]
+Usage: gayle run [options]
 
 Verify or populate all remote configurations and secrets.
 
@@ -121,7 +117,7 @@ Options:
 ### List pushed configurations
 
 ```
-Usage: oprah list [options]
+Usage: gayle list [options]
 
 List all remote configurations and secrets.
 
@@ -132,7 +128,7 @@ Options:
 ### Fetch individual configuration
 
 ```
-Usage: oprah fetch [options]
+Usage: gayle fetch [options]
 
 Fetch config or secret
 
@@ -145,7 +141,7 @@ Options:
 Fetch configuration can be used in automation scripts. Example:
 
 ```bash
-PARAMS=$(./node_modules/.bin/cm fetch -k "CALLBACK_URL,LOGOUT_URL" -s $STAGE)
+PARAMS=$(./node_modules/.bin/gayle fetch -k "CALLBACK_URL,LOGOUT_URL" -s $STAGE)
 
 CALLBACK_URL=$(echo $PARAMS | jq -er ".CALLBACK_URL")
 LOGOUT_URL=$(echo $PARAMS | jq -er ".LOGOUT_URL")
@@ -156,26 +152,26 @@ LOGOUT_URL=$(echo $PARAMS | jq -er ".LOGOUT_URL")
 ### Import
 
 ```
-Usage: oprah import [options]
+Usage: gayle import [options]
 
 Import all of the configuration from the json from to a provider
 
 Options:
   -p, --path [path]  The location of the secrets and configuration file
-                     (default: "/tmp/oprah-exports.json")
+                     (default: "/tmp/gayle-exports.json")
   -h, --help         display help for command
 ```
 
 ### Export
 
 ```
-Usage: oprah export [options]
+Usage: gayle export [options]
 
 Export of all of the configuration from the provider to a text json file
 
 Options:
   -p, --path [path]      The location for the output secrets & configuration file
-                         (default: "/tmp/oprah-exports.json" or ".env_oprah")
+                         (default: "/tmp/gayle-exports.json" or ".env_gayle")
   -t, --target [target]  The output target, available options are json|env
                          (default:json)
 
@@ -187,7 +183,7 @@ Options:
 ### Clean up
 
 ```
-Usage: oprah clean-up [options]
+Usage: gayle clean-up [options]
 
 Clean up orphan configurations and secrets from provider
 
@@ -200,12 +196,3 @@ Options:
 ### License
 
 Feel free to use the code, it's released using the MIT license.
-
-[github-actions-image]: https://github.com/acloudguru/oprah/actions/workflows/publish.yml/badge.svg
-[github-actions-url]: https://github.com/ACloudGuru/oprah/actions/workflows/publish.yml
-[dependencies-image]: https://david-dm.org/ACloudGuru/oprah/status.svg
-[dependencies-url]: https://david-dm.org/ACloudGuru/oprah
-[npm-image]: https://img.shields.io/npm/v/oprah.svg
-[npm-url]: https://www.npmjs.com/package/oprah
-[codacy-image]: https://api.codacy.com/project/badge/Grade/6464d14b26214357ba838d2cdbdfcb8e
-[codacy-url]: https://www.codacy.com/app/subash.adhikari/oprah?utm_source=github.com&utm_medium=referral&utm_content=ACloudGuru/oprah&utm_campaign=Badge_Grade

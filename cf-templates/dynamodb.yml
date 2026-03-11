@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: "Oprah Dynamodb Parameter Store "
+Description: "Gayle Dynamodb Parameter Store "
 Parameters:
   TableName:
     Type: String

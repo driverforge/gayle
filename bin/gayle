@@ -12,7 +12,7 @@ let oprahPromise = null;
 program
   .version(pjson.version)
   .option('-s, --stage [stage]', 'Specify stage to run on. (required)')
-  .option('-c, --config [config]', 'Path to oprah configuration', 'oprah.yml');
+  .option('-c, --config [config]', 'Path to gayle configuration', 'gayle.yml');
 
 program
   .command('run')
@@ -51,7 +51,7 @@ program
 
 program
   .command('init')
-  .description('Initialize oprah. Only required to run once.')
+  .description('Initialize gayle. Only required to run once.')
   .action(() => {
     const { stage, config } = program.opts();
 
@@ -74,7 +74,7 @@ program
   )
   .option(
     '-p, --path [path]',
-    'The location for the output secrets & configuration file (default: "/tmp/oprah-exports.json" or ".env_oprah")'
+    'The location for the output secrets & configuration file (default: "/tmp/gayle-exports.json" or ".env_gayle")'
   )
   .option(
     '-t, --target [target]',
@@ -84,7 +84,7 @@ program
   .action(({ path, target, configOnly = false }) => {
     const { stage, config } = program.opts();
     oprahPromise = makeOprah({ stage, config }).export(
-      path || (target === 'env' ? '.env_oprah' : '/tmp/oprah-exports.json'),
+      path || (target === 'env' ? '.env_gayle' : '/tmp/gayle-exports.json'),
       target || 'json',
       configOnly
     );
@@ -97,12 +97,12 @@ program
   )
   .option(
     '-p, --path [path]',
-    'The location of the secrets and configuration file (default: "/tmp/oprah-exports.json")'
+    'The location of the secrets and configuration file (default: "/tmp/gayle-exports.json")'
   )
   .action(({ path }) => {
     const { stage, config } = program.opts();
     oprahPromise = makeOprah({ stage, config }).import(
-      path || '/tmp/oprah-exports.json'
+      path || '/tmp/gayle-exports.json'
     );
   });
 

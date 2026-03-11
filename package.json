@@ -1,5 +1,5 @@
 {
-  "name": "oprah",
+  "name": "@driverforge/gayle",
   "version": "5.6.0",
   "description": "Package to deploy parameters to AWS and Azure",
   "repository": "https://github.com/ACloudGuru/oprah.git",
@@ -13,7 +13,7 @@
     "Patrick Shiel <patrick-shiel@pluralsight.com>"
   ],
   "license": "MIT",
-  "bin": "./bin/oprah",
+  "bin": "./bin/gayle",
   "scripts": {
     "lint": "yarn eslint .",
     "test": "yarn jest --coverage",
