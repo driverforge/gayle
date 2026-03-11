@@ -4,6 +4,7 @@
   "description": "Package to deploy parameters to AWS and Azure",
   "repository": "https://github.com/ACloudGuru/oprah.git",
   "author": "subash adhikari <subash.adhikari@acloud.guru>",
+  "packageManager": "yarn@4.10.3",
   "engines": {
     "node": ">=22.0.0"
   },

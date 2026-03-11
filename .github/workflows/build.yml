@@ -10,12 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Enable corepack
+        run: corepack enable
+
       - name: Use node 22.x
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
 
       - run: yarn test
 
