@@ -35,9 +35,11 @@
   },
   "homepage": "https://github.com/ACloudGuru/oprah",
   "dependencies": {
+    "@aws-sdk/client-cloudformation": "^3.1006.0",
+    "@aws-sdk/client-ssm": "^3.1006.0",
+    "@aws-sdk/client-sts": "^3.1006.0",
     "@azure/identity": "^4.2.0",
     "@azure/keyvault-secrets": "^4.8.0",
-    "aws-sdk": "^2.1407.0",
     "chalk": "^4.1.0",
     "commander": "^7.1.0",
     "dataloader": "^2.0.0",
