@@ -1,18 +1,5 @@
 const S3 = jest.fn();
 const SecretsManager = jest.fn();
-const DynamoDB = {
-  DocumentClient: jest.fn().mockReturnValue({
-    put: jest.fn({ promise: () => Promise.resolve({}) }),
-    query: jest.fn({ promise: () => Promise.resolve({ Items: [] }) }),
-    update: jest.fn({ promise: () => Promise.resolve({}) }),
-    delete: jest.fn({ promise: () => Promise.resolve({}) }),
-    get: jest.fn({ promise: () => Promise.resolve({ Item: {} }) }),
-    options: {
-      convertEmptyValues: true
-    }
-  })
-};
-
 const CloudFormation = jest.fn(() => ({
   describeStacks: jest.fn(() => ({
     promise: () => Promise.resolve()
@@ -38,7 +25,6 @@ const config = {
 module.exports = {
   config,
   CloudFormation,
-  DynamoDB,
   SecretsManager,
   STS,
   KMS,

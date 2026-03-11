@@ -17,10 +17,20 @@ $ npm install @driverforge/gayle
 ## Usage
 
 1. At the root of your application add configuration file called `gayle.yml`.
+2. Use `gayle` CLI tool to push your keys to your provider.
 
 ```
+$ gayle run --stage <stage> --interactive
+```
+
+### Provider Examples
+
+#### AWS SSM (Systems Manager Parameter Store)
+
+```yaml
 service: my-service
-provider: ssm
+provider:
+  name: ssm
 
 config:
   path: /${stage}/config
@@ -31,24 +41,45 @@ config:
     DB_TABLE: "some database table name for ${stage}"
 
 secret:
+  keyId: some-arn-of-kms-key-to-use           # If not specified, default key will be used to encrypt variables.
   path: /${stage}/secret
   required:
     DB_PASSWORD: "secret database password"
 ```
 
-2. Use `gayle` CLI tool to push your keys to AWS parameter store.
+#### Azure Key Vault
 
-```
-$ gayle run --stage <stage> --interactive
+The `vault` property specifies the Azure Key Vault name. Authentication uses Azure's `DefaultAzureCredential`.
+
+```yaml
+service: my-service
+provider:
+  name: key-vault
+  vault: my-vault-${stage}                    # Azure Key Vault name (used to build https://<vault>.vault.azure.net)
+
+config:
+  path: graph
+  defaults:
+    DB_NAME: my-database
+    DB_HOST: 3200
+  required:
+    DB_TABLE: "some database table name for ${stage}"
+
+secret:
+  path: graph
+  required:
+    DB_PASSWORD: "secret database password"
 ```
 
 ### Config File
 
-Following is the configuration file will all possible options:
+Following is the configuration file with all possible options:
 
-```
+```yaml
 service: my-service
-provider: ssm                                 # Only supports ssm for now.
+provider:
+  name: ssm                                   # Supports ssm and key-vault.
+  # vault: my-vault-${stage}                  # Required for key-vault provider.
 
 stacks:                                       # Outputs from cloudformation stacks that needs to be interpolated.
   - some-cloudformation-stack
@@ -64,7 +95,7 @@ config:
     DB_TABLE: "some database table name for ${stage}"
 
 secret:
-  keyId: some-arn-of-kms-key-to-use           # If not specified, default key will be used to encrypt variables.
+  keyId: some-arn-of-kms-key-to-use           # If not specified, default key will be used to encrypt variables. (SSM only)
   path: /${stage}/secret                      # Base path for params to be added to
   required:
     DB_PASSWORD: "secret database password"   # Parameter to encrypt and add to. Will be encrypted using KMS.
