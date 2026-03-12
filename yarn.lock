@@ -68,9 +68,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/client-cloudformation@npm:^3.1006.0":
-  version: 3.1006.0
-  resolution: "@aws-sdk/client-cloudformation@npm:3.1006.0"
+"@aws-sdk/client-cloudformation@npm:^3.1007.0":
+  version: 3.1007.0
+  resolution: "@aws-sdk/client-cloudformation@npm:3.1007.0"
   dependencies:
     "@aws-crypto/sha256-browser": "npm:5.2.0"
     "@aws-crypto/sha256-js": "npm:5.2.0"
@@ -112,7 +112,7 @@ __metadata:
     "@smithy/util-utf8": "npm:^4.2.2"
     "@smithy/util-waiter": "npm:^4.2.12"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/42d82d16582827429073eb1bde5d7fe0d09e1e5bb6194882523dde9e780c3a845f960ff7d0ff42ff18af962f494c9eba2591361444f9e87a3a97f4bbff56522f
+  checksum: 10c0/0081e5e11c9434b82121f679f6cb3aef32cf557a39e2e46de36a2bcf1adc309991a7adf012f3881e7b7a2bf6c6d15869b5f28cfc53573698dd701a6de078fc14
   languageName: node
   linkType: hard
 
@@ -1381,7 +1381,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@driverforge/gayle@workspace:."
   dependencies:
-    "@aws-sdk/client-cloudformation": "npm:^3.1006.0"
+    "@aws-sdk/client-cloudformation": "npm:^3.1007.0"
     "@aws-sdk/client-ssm": "npm:^3.1007.0"
     "@aws-sdk/client-sts": "npm:^3.1006.0"
     "@azure/identity": "npm:^4.2.0"
