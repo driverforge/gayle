@@ -1429,7 +1429,7 @@ __metadata:
     eslint-plugin-prettier: "npm:^5.5.5"
     husky: "npm:^9.1.7"
     jest: "npm:^30.3.0"
-    js-yaml: "npm:^4.0.0"
+    js-yaml: "npm:^4.1.1"
     lodash: "npm:^4.17.23"
     pinst: "npm:^2.1.6"
     prettier: "npm:^1.18.2"
@@ -5946,18 +5946,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"js-yaml@npm:^4.0.0":
-  version: 4.1.0
-  resolution: "js-yaml@npm:4.1.0"
-  dependencies:
-    argparse: "npm:^2.0.1"
-  bin:
-    js-yaml: bin/js-yaml.js
-  checksum: 10c0/184a24b4eaacfce40ad9074c64fd42ac83cf74d8c8cd137718d456ced75051229e5061b8633c3366b8aada17945a7a356b337828c19da92b51ae62126575018f
-  languageName: node
-  linkType: hard
-
-"js-yaml@npm:^4.1.0":
+"js-yaml@npm:^4.1.0, js-yaml@npm:^4.1.1":
   version: 4.1.1
   resolution: "js-yaml@npm:4.1.1"
   dependencies:
