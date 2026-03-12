@@ -81,6 +81,9 @@ typings/
 
 # End of https://www.gitignore.io/api/node
 
+# Yarn berry install state (local cache)
+.yarn/install-state.gz
+
 .DS_Store
 .env-dev
 .env-deploy
