@@ -39,7 +39,7 @@
   },
   "homepage": "https://github.com/driverforge/gayle",
   "dependencies": {
-    "@aws-sdk/client-cloudformation": "^3.1006.0",
+    "@aws-sdk/client-cloudformation": "^3.1007.0",
     "@aws-sdk/client-ssm": "^3.1007.0",
     "@aws-sdk/client-sts": "^3.1006.0",
     "@azure/identity": "^4.2.0",
