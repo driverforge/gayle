@@ -2,25 +2,29 @@
   "name": "@driverforge/gayle",
   "version": "5.6.0",
   "description": "Package to deploy parameters to AWS and Azure",
-  "repository": "https://github.com/ACloudGuru/oprah.git",
-  "author": "subash adhikari <subash.adhikari@acloud.guru>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/driverforge/gayle.git"
+  },
+  "author": "Driverforge",
   "packageManager": "yarn@4.10.3",
   "engines": {
     "node": ">=22.0.0"
   },
-  "contributors": [
-    "DevOps Team <cloud-skills-devops@pluralsight.com>",
-    "Jaepil Kim <jaepil-kim@pluralsight.com>",
-    "Patrick Shiel <patrick-shiel@pluralsight.com>"
-  ],
   "license": "MIT",
   "bin": "./bin/gayle",
+  "files": [
+    "bin/",
+    "lib/",
+    "!lib/**/*.test.js"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "lint": "yarn eslint .",
     "test": "yarn jest --coverage",
-    "postinstall": "husky install",
-    "prepublishOnly": "pinst --disable",
-    "postpublish": "pinst --enable"
+    "prepare": "husky install"
   },
   "keywords": [
     "amazon-web-services",
@@ -31,9 +35,9 @@
     "azure"
   ],
   "bugs": {
-    "url": "https://github.com/ACloudGuru/oprah/issues"
+    "url": "https://github.com/driverforge/gayle/issues"
   },
-  "homepage": "https://github.com/ACloudGuru/oprah",
+  "homepage": "https://github.com/driverforge/gayle",
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.1006.0",
     "@aws-sdk/client-ssm": "^3.1006.0",
