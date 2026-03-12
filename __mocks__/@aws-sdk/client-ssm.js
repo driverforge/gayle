@@ -1,27 +1,27 @@
 const mockSend = jest.fn();
 
 const SSMClient = jest.fn(() => ({
-  send: mockSend
+  send: mockSend,
 }));
 
-const GetParametersCommand = jest.fn(input => ({
+const GetParametersCommand = jest.fn((input) => ({
   commandName: 'GetParametersCommand',
-  input
+  input,
 }));
 
-const GetParametersByPathCommand = jest.fn(input => ({
+const GetParametersByPathCommand = jest.fn((input) => ({
   commandName: 'GetParametersByPathCommand',
-  input
+  input,
 }));
 
-const PutParameterCommand = jest.fn(input => ({
+const PutParameterCommand = jest.fn((input) => ({
   commandName: 'PutParameterCommand',
-  input
+  input,
 }));
 
-const DeleteParametersCommand = jest.fn(input => ({
+const DeleteParametersCommand = jest.fn((input) => ({
   commandName: 'DeleteParametersCommand',
-  input
+  input,
 }));
 
 module.exports = {
@@ -30,5 +30,5 @@ module.exports = {
   GetParametersByPathCommand,
   PutParameterCommand,
   DeleteParametersCommand,
-  __mockSend: mockSend
+  __mockSend: mockSend,
 };

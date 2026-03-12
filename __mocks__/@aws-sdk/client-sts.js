@@ -2,21 +2,21 @@ const mockSend = jest.fn(() =>
   Promise.resolve({
     Account: '1234',
     Arn: 'mock-arn',
-    UserId: 'mock-user-id'
-  })
+    UserId: 'mock-user-id',
+  }),
 );
 
 const STSClient = jest.fn(() => ({
-  send: mockSend
+  send: mockSend,
 }));
 
-const GetCallerIdentityCommand = jest.fn(input => ({
+const GetCallerIdentityCommand = jest.fn((input) => ({
   _commandName: 'GetCallerIdentityCommand',
-  input
+  input,
 }));
 
 module.exports = {
   STSClient,
   GetCallerIdentityCommand,
-  __mockSend: mockSend
+  __mockSend: mockSend,
 };
