@@ -5,14 +5,14 @@ module.exports = {
   collectCoverageFrom: [
     'lib/**/*.js',
     '!src/plugins/**/*.js',
-    '!**/node_modules/**'
+    '!**/node_modules/**',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: [
     ['lcovonly', { projectRoot: __dirname }],
     'text',
     'text-summary',
-    'html'
+    'html',
   ],
   testMatch: ['**/?(*.)+(spec|test).[tj]s?(x)'],
   watchman: true,
@@ -21,7 +21,7 @@ module.exports = {
       statements: 94,
       branches: 75,
       functions: 92,
-      lines: 94
-    }
-  }
+      lines: 94,
+    },
+  },
 };

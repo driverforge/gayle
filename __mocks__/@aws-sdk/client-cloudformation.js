@@ -1,16 +1,16 @@
 const mockSend = jest.fn(() => Promise.resolve());
 
 const CloudFormationClient = jest.fn(() => ({
-  send: mockSend
+  send: mockSend,
 }));
 
-const DescribeStacksCommand = jest.fn(input => ({
+const DescribeStacksCommand = jest.fn((input) => ({
   _commandName: 'DescribeStacksCommand',
-  input
+  input,
 }));
 
 module.exports = {
   CloudFormationClient,
   DescribeStacksCommand,
-  __mockSend: mockSend
+  __mockSend: mockSend,
 };
