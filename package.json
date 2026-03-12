@@ -47,8 +47,6 @@
     "chalk": "^4.1.0",
     "commander": "^14.0.3",
     "dataloader": "^2.0.0",
-    "deep-map": "^2.0.0",
-    "es6-weak-map": "^2.0.3",
     "js-yaml": "^4.1.1",
     "lodash": "^4.17.23",
     "prompt": "^1.1.0",
