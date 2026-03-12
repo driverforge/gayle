@@ -1431,7 +1431,7 @@ __metadata:
     jest: "npm:^30.3.0"
     js-yaml: "npm:^4.1.1"
     lodash: "npm:^4.17.23"
-    pinst: "npm:^2.1.6"
+    pinst: "npm:^3.0.0"
     prettier: "npm:^1.18.2"
     prompt: "npm:^1.1.0"
     root-path: "npm:^0.2.1"
@@ -4600,13 +4600,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fromentries@npm:^1.3.2":
-  version: 1.3.2
-  resolution: "fromentries@npm:1.3.2"
-  checksum: 10c0/63938819a86e39f490b0caa1f6b38b8ad04f41ccd2a1c144eb48a21f76e4dbc074bc62e97abb053c7c1f541ecc70cf0b8aaa98eed3fe02206db9b6f9bb9a6a47
-  languageName: node
-  linkType: hard
-
 "fs-minipass@npm:^3.0.0":
   version: 3.0.3
   resolution: "fs-minipass@npm:3.0.3"
@@ -6823,14 +6816,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pinst@npm:^2.1.6":
-  version: 2.1.6
-  resolution: "pinst@npm:2.1.6"
-  dependencies:
-    fromentries: "npm:^1.3.2"
+"pinst@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "pinst@npm:3.0.0"
   bin:
     pinst: bin.js
-  checksum: 10c0/2e97ad8707878e9231a5a990214d5eeb3f73daa8cf7fd75acf5765f93672f630c8a66fee9d897aee1f4c3bfc5b09c1a80ac23e016f0deb599bfe07e28e9ea307
+  checksum: 10c0/abb1ed62ea2acb2207a7a860715bdb26ecbde74ede8fad5f6200194f3e22db25e2b7a49af05e5cc7fc05384709c651e0000323f0077d7239060c4b68c8acd428
   languageName: node
   linkType: hard
 
