@@ -116,9 +116,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@aws-sdk/client-ssm@npm:^3.1006.0":
-  version: 3.1006.0
-  resolution: "@aws-sdk/client-ssm@npm:3.1006.0"
+"@aws-sdk/client-ssm@npm:^3.1007.0":
+  version: 3.1007.0
+  resolution: "@aws-sdk/client-ssm@npm:3.1007.0"
   dependencies:
     "@aws-crypto/sha256-browser": "npm:5.2.0"
     "@aws-crypto/sha256-js": "npm:5.2.0"
@@ -160,7 +160,7 @@ __metadata:
     "@smithy/util-utf8": "npm:^4.2.2"
     "@smithy/util-waiter": "npm:^4.2.12"
     tslib: "npm:^2.6.2"
-  checksum: 10c0/e0b7620ac7612603e6e17274266520c52ca376543efd97d37f6a458c7ebde86bf035acc63cdfb4b0e2f8d1b2c0490a8d87d82008272126b70706e4545fbff7ae
+  checksum: 10c0/fe095e126dec9af079a21e150fc586d5b92412a1ed191c3c5bb766b400f96f77aa0cc0f6c57e786874b617a4108dcc96aef4eb2e9ea23f746e0d83a0536b15cc
   languageName: node
   linkType: hard
 
@@ -1382,7 +1382,7 @@ __metadata:
   resolution: "@driverforge/gayle@workspace:."
   dependencies:
     "@aws-sdk/client-cloudformation": "npm:^3.1006.0"
-    "@aws-sdk/client-ssm": "npm:^3.1006.0"
+    "@aws-sdk/client-ssm": "npm:^3.1007.0"
     "@aws-sdk/client-sts": "npm:^3.1006.0"
     "@azure/identity": "npm:^4.2.0"
     "@azure/keyvault-secrets": "npm:^4.8.0"
