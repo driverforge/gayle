@@ -1,0 +1,82 @@
+name: Cut release
+
+# Dispatch-driven release entry point, mirroring the ergonomics of the old npm
+# publish workflow: pick a bump type (or exact version), and this runs the
+# checks, creates the tag, and pushes it — which triggers release.yml.
+#
+# The tag is pushed with a driverforge-bot app token, NOT the workflow's own
+# GITHUB_TOKEN: pushes made with GITHUB_TOKEN deliberately do not trigger other
+# workflows, so a GITHUB_TOKEN-pushed tag would never start the release. The
+# bot app's installation must therefore cover this repo with Contents write.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version bump type (patch, minor, major) or exact version (e.g. 6.0.0)"
+        required: true
+        default: "patch"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint push token from driverforge-bot
+        id: bot-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.DRIVERFORGE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.DRIVERFORGE_BOT_PRIVATE_KEY }}
+          owner: driverforge
+          repositories: gayle
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full tag history for the version computation
+          token: ${{ steps.bot-token.outputs.token }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # The old npm publish ran test+lint before shipping; keep that gate.
+      - name: Checks
+        run: make check
+
+      - name: Compute next version
+        id: version
+        run: |
+          set -euo pipefail
+          input="${{ github.event.inputs.version }}"
+          if [[ "$input" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            next="$input"
+          else
+            latest="$(git tag -l 'v*' --sort=-v:refname | head -1)"
+            latest="${latest#v}"
+            latest="${latest:-0.0.0}"
+            IFS=. read -r major minor patch <<< "$latest"
+            case "$input" in
+              major) next="$((major+1)).0.0" ;;
+              minor) next="$major.$((minor+1)).0" ;;
+              patch) next="$major.$minor.$((patch+1))" ;;
+              *) echo "::error::version must be patch, minor, major, or X.Y.Z (got '$input')"; exit 1 ;;
+            esac
+          fi
+          if git rev-parse -q --verify "refs/tags/v$next" >/dev/null; then
+            echo "::error::tag v$next already exists"
+            exit 1
+          fi
+          echo "tag=v$next" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$next" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create and push tag
+        run: |
+          git config user.name "driverforge-bot[bot]"
+          git config user.email "264301095+driverforge-bot[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "release: ${{ steps.version.outputs.tag }}"
+          git push origin "refs/tags/${{ steps.version.outputs.tag }}"
