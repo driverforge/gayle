@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `clean-up` (and `run --removing`) refuses to prune when the configuration declares no config or secret keys — an empty or misparsed gayle.yml can no longer delete every remote parameter under the app's paths (DF-644)
+- each pruned parameter is logged by name in non-dry-run mode
+
+### Fixed
+- Key Vault deletion failures are no longer silently swallowed: a failed delete rejects the run (the secret is still live); a failed purge only warns (soft-deleted secrets no longer appear in listings)
+
 ## [v5.3.1](2022-05-16)
 ### Fixed
 - using `-m` when there's no missing secrets doesn't crash anymore
