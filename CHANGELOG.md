@@ -5,7 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [6.0.0](2026-07-15)
+
+Gayle is now a Go binary. The Node.js implementation and npm distribution are
+retired; the CLI surface (commands, flags, defaults, output wording, the
+fetch-JSON-on-stdout contract) is unchanged. Install via
+`brew install driverforge/tap/gayle`, Scoop, or the archives on
+releases.driverforge.com — see the README. The `@driverforge/gayle` npm
+package is deprecated and frozen at v5.
+
+### Changed
+- **Exit codes are honest end-to-end.** Exit 0 strictly means every operation
+  verifiably succeeded; expected failures exit 1; crashes exit 2.
+  - usage errors (unknown command/flag, missing `--stage`, `fetch` without
+    `-k`) exit 1 — v5 printed help and exited 0
+  - partial provider write/delete failures attempt every key, report each
+    failed key, and exit 1
+  - Key Vault read errors other than 404 (auth/network/throttle) fail the run
+    instead of silently reading as empty values
+  - a CloudFormation DescribeStacks failure is a hard error instead of a
+    warning with empty outputs
+  - `fetch` errors on keys not declared in the configuration instead of
+    silently omitting them
+  - a malformed gayle.yml reports the real parse error instead of
+    "Could not find gayle.yml"
+  - SSM deletes now surface `InvalidParameters` from the delete response
+- `-r/--removing`, `-d/--dry-run`, `-C/--config-only` are real boolean flags
+  (`-r` or `--removing=false`). v5's optional-value quirk meant `-r false`
+  still deleted; that form is now a usage error.
+- `${...}` interpolation supports bare variable names only (v5's lodash
+  template technically evaluated JavaScript; no known config relied on it)
+- interactive prompts require a terminal: `run -i` under CI or a pipe fails
+  fast instead of hanging
+- a `secret.keyId` in gayle.yml now logs a warning: it was documented in v5
+  but always ignored — SSM secrets are encrypted with `alias/aws/ssm`
 
 ### Added
 - `clean-up` (and `run --removing`) refuses to prune when the configuration declares no config or secret keys — an empty or misparsed gayle.yml can no longer delete every remote parameter under the app's paths (DF-644)
@@ -13,6 +46,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 - Key Vault deletion failures are no longer silently swallowed: a failed delete rejects the run (the secret is still live); a failed purge only warns (soft-deleted secrets no longer appear in listings)
+- `import` with an empty `configs` or `secrets` section no longer crashes
+- `generate`'s file write is checked (v5 swallowed write errors)
+- `export --target` is validated (json|env)
+- misleading messages corrected: a missing config file names the path that was
+  actually tried (v5 always blamed the working directory, even with
+  `--config`); a missing `provider.name` no longer prints `'undefined'`;
+  "Please specify ssmPath…" (wrong key name, wrong for Key Vault) and the
+  bare "Missing path!" now name the actual `config.path`/`secret.path` keys
 
 ## [v5.3.1](2022-05-16)
 ### Fixed
