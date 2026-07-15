@@ -94,6 +94,9 @@ changelog:
 # xattr-stripping is unnecessary — and discouraged — once signed.
 homebrew_casks:
   - name: gayle
+    # auto: prerelease tags (v6.0.0-rc1) are built and uploaded to Azure but
+    # NOT pushed to the tap — `brew install` keeps serving the last stable.
+    skip_upload: auto
     binaries:
       - gayle
     # Author as the GitHub App the push token belongs to (the id+login noreply
@@ -130,6 +133,8 @@ homebrew_casks:
 # Windows: `scoop install gayle` (after `scoop bucket add driverforge https://github.com/driverforge/scoop-bucket`)
 scoops:
   - name: gayle
+    # Same prerelease handling as the cask: rc tags never reach the bucket.
+    skip_upload: auto
     # Same bot attribution as the cask (see above).
     commit_author:
       name: driverforge-bot[bot]
@@ -148,3 +153,5 @@ release:
   github:
     owner: driverforge
     name: gayle
+  # Mark semver-prerelease tags (v6.0.0-rc1) as GitHub prereleases.
+  prerelease: auto

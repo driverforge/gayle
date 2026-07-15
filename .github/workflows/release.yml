@@ -108,6 +108,17 @@ jobs:
             az storage blob upload -c "$AZURE_STORAGE_CONTAINER" \
               -n "$ARTIFACT_PATH/$TAG/manifest.json" -f manifest.json \
               --content-cache-control "public, max-age=31536000, immutable" --overwrite
-            az storage blob upload -c "$AZURE_STORAGE_CONTAINER" \
-              -n "$ARTIFACT_PATH/latest/manifest.json" -f manifest.json \
-              --content-cache-control "no-cache, must-revalidate" --overwrite
+
+            # The mutable latest/ pointer only ever advances to STABLE
+            # releases — a prerelease (v6.0.0-rc1) publishes its own versioned
+            # manifest above but must not become "latest".
+            case "$VERSION" in
+              *-*)
+                echo "prerelease $VERSION: leaving latest/manifest.json untouched"
+                ;;
+              *)
+                az storage blob upload -c "$AZURE_STORAGE_CONTAINER" \
+                  -n "$ARTIFACT_PATH/latest/manifest.json" -f manifest.json \
+                  --content-cache-control "no-cache, must-revalidate" --overwrite
+                ;;
+            esac
