@@ -20,6 +20,7 @@ on:
 
 permissions:
   contents: read
+  actions: write # dispatch release.yml when the tag already exists
 
 jobs:
   tag:
@@ -68,15 +69,27 @@ jobs:
             esac
           fi
           if git rev-parse -q --verify "refs/tags/v$next" >/dev/null; then
-            echo "::error::tag v$next already exists"
-            exit 1
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Re-releasing existing tag v$next" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Releasing v$next" >> "$GITHUB_STEP_SUMMARY"
           fi
           echo "tag=v$next" >> "$GITHUB_OUTPUT"
-          echo "Releasing v$next" >> "$GITHUB_STEP_SUMMARY"
 
+      # New tag: create and push it — the (bot-token) push triggers release.yml.
       - name: Create and push tag
+        if: steps.version.outputs.exists == 'false'
         run: |
           git config user.name "driverforge-bot[bot]"
           git config user.email "264301095+driverforge-bot[bot]@users.noreply.github.com"
           git tag -a "${{ steps.version.outputs.tag }}" -m "release: ${{ steps.version.outputs.tag }}"
           git push origin "refs/tags/${{ steps.version.outputs.tag }}"
+
+      # Existing tag: nothing to push, so start the release for it directly
+      # (release.yml's guard only accepts tag refs, which this is).
+      - name: Trigger release for existing tag
+        if: steps.version.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release.yml --ref "refs/tags/${{ steps.version.outputs.tag }}"
