@@ -21,6 +21,10 @@ func Warn(msg string) {
 // Gray styles a status line (paths, update reports).
 func Gray(s string) string { return grayStyle.Render(s) }
 
+// White styles a primary info line (section banners like "Populating
+// configuration...").
+func White(s string) string { return whiteStyle.Render(s) }
+
 // Cyan styles a banner/header line (mode banner, section headers).
 func Cyan(s string) string { return cyanStyle.Render(s) }
 

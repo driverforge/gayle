@@ -39,7 +39,7 @@ func Execute() (code int) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	root := newRootCmd()
+	root := newRootCmd(newDeps())
 	cmd, err := root.ExecuteContextC(ctx)
 	if err != nil {
 		// Cobra usage errors (unknown command/flag, bad args) arrive here
@@ -55,7 +55,7 @@ func Execute() (code int) {
 	return 0
 }
 
-func newRootCmd() *cobra.Command {
+func newRootCmd(d *deps) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "gayle",
 		Short:         "Deploy configuration and secrets to AWS SSM Parameter Store or Azure Key Vault",
@@ -91,14 +91,14 @@ func newRootCmd() *cobra.Command {
 	root.SetVersionTemplate(buildinfo.String() + "\n")
 
 	root.AddCommand(
-		newRunCmd(),
-		newInitCmd(),
+		newRunCmd(d),
+		newInitCmd(d),
 		newGenerateCmd(),
-		newExportCmd(),
-		newImportCmd(),
-		newListCmd(),
-		newFetchCmd(),
-		newCleanUpCmd(),
+		newExportCmd(d),
+		newImportCmd(d),
+		newListCmd(d),
+		newFetchCmd(d),
+		newCleanUpCmd(d),
 	)
 	installUsageErrors(root) // make unknown command/flag/arg errors friendly
 	return root

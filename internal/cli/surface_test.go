@@ -22,7 +22,7 @@ func resetFlags() {
 func execute(t *testing.T, args ...string) (stdout, stderr string, err error) {
 	t.Helper()
 	resetFlags()
-	root := newRootCmd()
+	root := newRootCmd(newDeps())
 	var out, errb bytes.Buffer
 	root.SetOut(&out)
 	root.SetErr(&errb)
@@ -34,7 +34,7 @@ func execute(t *testing.T, args ...string) (stdout, stderr string, err error) {
 }
 
 func TestCommandSurface(t *testing.T) {
-	root := newRootCmd()
+	root := newRootCmd(newDeps())
 	want := []string{"run", "init", "generate", "export", "import", "list", "fetch", "clean-up"}
 	byName := map[string]*cobra.Command{}
 	for _, c := range root.Commands() {
@@ -48,7 +48,7 @@ func TestCommandSurface(t *testing.T) {
 }
 
 func TestFlagSurface(t *testing.T) {
-	root := newRootCmd()
+	root := newRootCmd(newDeps())
 
 	// name → flag name → {shorthand, default}
 	type f struct{ short, def string }
@@ -135,6 +135,7 @@ func TestMissingStageMessage(t *testing.T) {
 
 // generate is the one command that must work without --stage.
 func TestGenerateNeedsNoStage(t *testing.T) {
+	t.Chdir(t.TempDir()) // generate writes gayle.yml into the working directory
 	_, _, err := execute(t, "generate")
 	if err != nil && err.Error() == "Invalid options!! You must specify stage. (pass -s <stage>)" {
 		t.Errorf("generate must not require --stage")

@@ -18,6 +18,7 @@ var (
 // dumb terminals, and NO_COLOR — matching chalk's TTY detection.
 var (
 	grayStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("245")) // chalk.gray — status lines
+	whiteStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("7"))   // chalk.white — info lines
 	cyanStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))   // chalk.cyan — banners/headers
 	greenStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))   // chalk.green — Done. / prompt labels
 	yellowStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))   // chalk.yellow — warnings, deletions
