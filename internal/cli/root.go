@@ -8,6 +8,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -42,17 +43,24 @@ func Execute() (code int) {
 	root := newRootCmd(newDeps())
 	cmd, err := root.ExecuteContextC(ctx)
 	if err != nil {
-		// Cobra usage errors (unknown command/flag, bad args) arrive here
-		// unwrapped; make them friendly. cmd is the command cobra resolved.
-		err = friendlyUsage(cmd, err)
-		if !clierr.IsUser(err) {
-			ui.RenderCrash(os.Stderr, err)
-			return 2
-		}
-		ui.RenderUserError(os.Stderr, err)
-		return 1
+		return renderFailure(cmd, err, os.Stderr)
 	}
 	return 0
+}
+
+// renderFailure maps a command error onto the exit-code contract: an expected
+// condition (clierr.UserError) renders friendly and exits 1; anything else is
+// a bug — crash card, exit 2. Cobra usage errors (unknown command/flag, bad
+// args) arrive unwrapped and are made friendly first; cmd is the command
+// cobra resolved.
+func renderFailure(cmd *cobra.Command, err error, w io.Writer) int {
+	err = friendlyUsage(cmd, err)
+	if !clierr.IsUser(err) {
+		ui.RenderCrash(w, err)
+		return 2
+	}
+	ui.RenderUserError(w, err)
+	return 1
 }
 
 func newRootCmd(d *deps) *cobra.Command {

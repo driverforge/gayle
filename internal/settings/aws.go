@@ -15,6 +15,16 @@ import (
 	"github.com/driverforge/gayle/internal/ui"
 )
 
+// stsAPI / cfAPI are the slices of the AWS clients the settings context uses —
+// seams so the lookup logic is unit-testable. The real clients satisfy them.
+type stsAPI interface {
+	GetCallerIdentity(ctx context.Context, in *sts.GetCallerIdentityInput, opts ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error)
+}
+
+type cfAPI interface {
+	DescribeStacks(ctx context.Context, in *cloudformation.DescribeStacksInput, opts ...func(*cloudformation.Options)) (*cloudformation.DescribeStacksOutput, error)
+}
+
 // Region resolves the AWS region the way the Node CLI did: AWS_REGION, then
 // AWS_DEFAULT_REGION, then us-east-1.
 func Region() string {
@@ -27,22 +37,25 @@ func Region() string {
 	return "us-east-1"
 }
 
-// awsContext gathers the AWS-derived interpolation variables: the caller
-// account id, the region, and every CloudFormation output of stackNames
-// (later stacks win on OutputKey collisions; accountId/region win over all).
-//
-// A DescribeStacks failure is a hard error. The Node CLI swallowed it into a
-// warning and empty outputs, which then surfaced as a baffling "X is not
-// defined" — or worse, silently deployed without the stack's values.
+// awsContext builds the real clients on the default credential chain and
+// delegates to awsContextWith.
 func awsContext(ctx context.Context, stackNames []string) (map[string]string, error) {
 	region := Region()
 	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		return nil, fmt.Errorf("aws config: %w", err)
 	}
-	stsClient := sts.NewFromConfig(cfg)
-	cfClient := cloudformation.NewFromConfig(cfg)
+	return awsContextWith(ctx, sts.NewFromConfig(cfg), cloudformation.NewFromConfig(cfg), region, stackNames)
+}
 
+// awsContextWith gathers the AWS-derived interpolation variables: the caller
+// account id, the region, and every CloudFormation output of stackNames
+// (later stacks win on OutputKey collisions; accountId/region win over all).
+//
+// A DescribeStacks failure is a hard error. The Node CLI swallowed it into a
+// warning and empty outputs, which then surfaced as a baffling "X is not
+// defined" — or worse, silently deployed without the stack's values.
+func awsContextWith(ctx context.Context, stsClient stsAPI, cfClient cfAPI, region string, stackNames []string) (map[string]string, error) {
 	g, gctx := errgroup.WithContext(ctx)
 
 	var accountID string
