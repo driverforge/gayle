@@ -109,9 +109,10 @@ func (l Loader) Load(ctx context.Context, filePath string, cliVars map[string]st
 	return extract(tree, stage)
 }
 
-// readConfig reads and parses the yml. A missing file keeps the Node CLI's
-// message; a malformed file reports the real parse error (the Node CLI
-// misreported any parse failure as "could not find" — an honesty fix).
+// readConfig reads and parses the yml. A missing file names the path that was
+// actually tried (the Node CLI always blamed the working directory, even when
+// --config pointed elsewhere); a malformed file reports the real parse error
+// (the Node CLI misreported any parse failure as "could not find").
 func readConfig(filePath string) (map[string]any, error) {
 	if !strings.HasSuffix(filePath, ".yml") {
 		return nil, fmt.Errorf("unsupported file type %q: only .yml configuration is supported", filePath)
@@ -119,8 +120,7 @@ func readConfig(filePath string) (map[string]any, error) {
 	contents, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			cwd, _ := os.Getwd()
-			return nil, fmt.Errorf("Could not find gayle.yml in the following directory - %s", cwd)
+			return nil, fmt.Errorf("Could not find gayle.yml at %s", filePath)
 		}
 		return nil, fmt.Errorf("reading %s: %w", filePath, err)
 	}
@@ -139,11 +139,10 @@ func readConfig(filePath string) (map[string]any, error) {
 func validateProvider(raw map[string]any) error {
 	name := providerName(raw)
 	if name != "ssm" && name != "key-vault" {
-		display := name
-		if display == "" {
-			display = "undefined" // what lodash get + template printed for a missing name
+		if name == "" {
+			return fmt.Errorf("Invalid provider!! 'provider.name' must be set to ssm or key-vault.")
 		}
-		return fmt.Errorf("Invalid provider '%s'!! Only ssm,key-vault are supported.", display)
+		return fmt.Errorf("Invalid provider '%s'!! Only ssm and key-vault are supported.", name)
 	}
 	if name == "key-vault" {
 		if vault, _ := mapAt(raw, "provider")["vault"].(string); vault == "" {

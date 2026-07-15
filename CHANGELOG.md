@@ -49,6 +49,11 @@ package is deprecated and frozen at v5.
 - `import` with an empty `configs` or `secrets` section no longer crashes
 - `generate`'s file write is checked (v5 swallowed write errors)
 - `export --target` is validated (json|env)
+- misleading messages corrected: a missing config file names the path that was
+  actually tried (v5 always blamed the working directory, even with
+  `--config`); a missing `provider.name` no longer prints `'undefined'`;
+  "Please specify ssmPath…" (wrong key name, wrong for Key Vault) and the
+  bare "Missing path!" now name the actual `config.path`/`secret.path` keys
 
 ## [v5.3.1](2022-05-16)
 ### Fixed

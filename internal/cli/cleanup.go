@@ -55,9 +55,9 @@ func cleanUp(ctx context.Context, d *deps, s *settings.Settings, dryRun bool) er
 	if s.Secret != nil {
 		secretPath = s.Secret.Path
 	}
-	// Node parity: cleanup reads both paths and errors when either is unset.
+	// Cleanup reads both paths (Node parity) and errors when either is unset.
 	if configPath == "" || secretPath == "" {
-		return clierr.User("Missing path!", "")
+		return clierr.User("Cleanup requires both 'config.path' and 'secret.path' to be set in gayle.yml.", "")
 	}
 
 	store, err := d.Store(ctx, s)

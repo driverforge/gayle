@@ -61,7 +61,7 @@ internal/ui          All output. Log lines: stderr, "Gayle: " prefix,
 | env export values unescaped inside `"…"` | cli/export.go | Existing consumers parse the v5 format. |
 | Export/import defaults `/tmp/gayle-exports.json` / `.env_gayle` | cli/export.go | Pipelines hardcode the paths. |
 | Mask reveals last 4 chars (`/\S(?=\S{4})/g` port, whitespace lookahead quirks included) | ui/mask.go | Output parity; pinned against Node in tests. |
-| `Gayle: ` stderr prefix and v5 log/error wording (`Missing required configs!!…`, provider validation strings) | ui/log.go, throughout | Pipelines grep stderr. |
+| `Gayle: ` stderr prefix and the v5 log-line shapes (`Updated config: Name: …`, `Cleanup --> …`) | ui/log.go, throughout | Pipelines grep stderr. Message *wording* is not contractual and may be improved when the v5 text was unclear or wrong (missing-file, provider validation, and path-requirement messages already were). |
 | fetch JSON is the only stdout output | cli/fetch.go | `gayle fetch … \| jq` is the documented scripting interface. |
 | `init` is a settings-validating no-op | cli/init.go | Pipelines still call it. |
 | clean-up requires BOTH config.path and secret.path (`Missing path!`) | cli/cleanup.go | v5 parity; loosening widens the delete surface. |

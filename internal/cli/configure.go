@@ -40,7 +40,7 @@ func populateConfig(ctx context.Context, store paramstore.Store, s *settings.Set
 		ui.Log(ui.Cyan("Could not find configuration overrides. Using default values."))
 	}
 	if s.Config.Path == "" {
-		return clierr.User("Please specify ssmPath for populateConfig", "")
+		return clierr.User("'config.path' must be set in gayle.yml to populate configs.", "")
 	}
 
 	prompted, err := promptRequired(ctx, store, s.ConfigParameters, s.Config.Required, interactive, missingOnly)
@@ -79,7 +79,7 @@ func populateSecret(ctx context.Context, store paramstore.Store, s *settings.Set
 	ui.Log(ui.White("Populating secrets..."))
 
 	if s.Secret.Path == "" {
-		return clierr.User("Please specify ssmPath for populateSecret", "")
+		return clierr.User("'secret.path' must be set in gayle.yml to populate secrets.", "")
 	}
 
 	secrets, err := promptRequired(ctx, store, s.SecretParameters, s.Secret.Required, interactive, missingOnly)

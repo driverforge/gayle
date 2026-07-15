@@ -20,12 +20,18 @@ registry of deliberately preserved v5 quirks.
 
 ## Compatibility contract
 
-The CLI surface — command names (including the hyphenated `clean-up`), flags,
-defaults, log wording, and the stdout/stderr split — is pinned by
-`internal/cli/surface_test.go`. CI pipelines invoke gayle unchanged from v5;
-`fetch`'s JSON is the ONLY stdout output, everything else goes to stderr with
+The contract is that **existing executions keep working**: command names
+(including the hyphenated `clean-up`), flags, defaults, exit-code semantics,
+and the stdout/stderr split are pinned by `internal/cli/surface_test.go`.
+`fetch`'s JSON is the ONLY stdout output; everything else goes to stderr with
 the literal `Gayle: ` prefix. Do not change any of this without a CHANGELOG
 entry and a deliberate decision.
+
+Message *wording* is NOT part of the contract: log and error text may be
+improved — and should be, when the inherited v5 text is unclear or incorrect
+(the missing-file, provider-validation, and path-requirement messages have
+already been rewritten this way). Machine-parsed surfaces (fetch JSON, export
+file formats) stay byte-compatible.
 
 **Exit codes are honest**: 0 strictly means everything verifiably succeeded,
 1 is an expected failure (`clierr.UserError`), 2 is a crash. Never swallow a

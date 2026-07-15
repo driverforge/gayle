@@ -159,12 +159,12 @@ func TestLoadErrors(t *testing.T) {
 		{
 			name:    "invalid provider",
 			yml:     "provider:\n  name: s3\n",
-			wantErr: "Invalid provider 's3'!! Only ssm,key-vault are supported.",
+			wantErr: "Invalid provider 's3'!! Only ssm and key-vault are supported.",
 		},
 		{
 			name:    "missing provider",
 			yml:     "service: x\n",
-			wantErr: "Invalid provider 'undefined'!! Only ssm,key-vault are supported.",
+			wantErr: "Invalid provider!! 'provider.name' must be set",
 		},
 		{
 			name:    "key-vault without vault",
@@ -205,8 +205,11 @@ func TestLoadErrors(t *testing.T) {
 
 func TestLoadMissingFile(t *testing.T) {
 	l := Loader{AWSContext: fakeAWS(nil)}
-	_, err := l.Load(context.Background(), filepath.Join(t.TempDir(), "gayle.yml"), nil, "dev")
-	if err == nil || !strings.Contains(err.Error(), "Could not find gayle.yml in the following directory") {
+	missing := filepath.Join(t.TempDir(), "gayle.yml")
+	_, err := l.Load(context.Background(), missing, nil, "dev")
+	// The message must name the path that was actually tried — the Node CLI
+	// blamed the working directory even when --config pointed elsewhere.
+	if err == nil || !strings.Contains(err.Error(), "Could not find gayle.yml at "+missing) {
 		t.Errorf("missing-file error mismatch: %v", err)
 	}
 }
