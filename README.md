@@ -2,22 +2,45 @@
 
 # Gayle
 
-Node module to push configuration and encrypted secrets to AWS and Azure.
+CLI to push configuration and encrypted secrets to AWS SSM Parameter Store and Azure Key Vault, driven by a `gayle.yml`.
+
+Gayle is a single static Go binary. Version 6 replaced the Node.js implementation (`@driverforge/gayle` on npm) — same commands, same flags, same output; only the installation changed. See [Changes from v5](#changes-from-v5-node) if you're migrating.
 
 ## Installation
 
-```
-# Via yarn
-$ yarn add @driverforge/gayle
+**macOS / Linux (Homebrew):**
 
-# Via npm
-$ npm install @driverforge/gayle
+```
+brew install driverforge/tap/gayle
+```
+
+**Windows (Scoop):**
+
+```
+scoop bucket add driverforge https://github.com/driverforge/scoop-bucket
+scoop install gayle
+```
+
+**Direct download (CI pipelines):**
+
+Archives for linux/darwin/windows on amd64/arm64, with checksums, are published to
+`https://releases.driverforge.com/driverforge-releases/gayle/<tag>/` — the
+`latest/manifest.json` alongside them lists the current version and artifact URLs:
+
+```bash
+curl -fsSL https://releases.driverforge.com/driverforge-releases/gayle/latest/manifest.json
+```
+
+**From source:**
+
+```
+go install github.com/driverforge/gayle/cmd/gayle@latest
 ```
 
 ## Usage
 
-1. At the root of your application add configuration file called `gayle.yml`.
-2. Use `gayle` CLI tool to push your keys to your provider.
+1. At the root of your application add a configuration file called `gayle.yml` (`gayle generate` writes an example).
+2. Use the `gayle` CLI to push your keys to your provider.
 
 ```
 $ gayle run --stage <stage> --interactive
@@ -41,7 +64,6 @@ config:
     DB_TABLE: "some database table name for ${stage}"
 
 secret:
-  keyId: some-arn-of-kms-key-to-use           # If not specified, default key will be used to encrypt variables.
   path: /${stage}/secret
   required:
     DB_PASSWORD: "secret database password"
@@ -49,7 +71,7 @@ secret:
 
 #### Azure Key Vault
 
-The `vault` property specifies the Azure Key Vault name. Authentication uses Azure's `DefaultAzureCredential`.
+The `vault` property specifies the Azure Key Vault name. Authentication uses Azure's `DefaultAzureCredential`. Key Vault paths must not contain slashes (secret names are built as `<path>--<KEY>` and Azure only allows alphanumerics and hyphens).
 
 ```yaml
 service: my-service
@@ -95,7 +117,6 @@ config:
     DB_TABLE: "some database table name for ${stage}"
 
 secret:
-  keyId: some-arn-of-kms-key-to-use           # If not specified, default key will be used to encrypt variables. (SSM only)
   path: /${stage}/secret                      # Base path for params to be added to
   required:
     DB_PASSWORD: "secret database password"   # Parameter to encrypt and add to. Will be encrypted using KMS.
@@ -103,76 +124,73 @@ secret:
                                               # Value in quote will be displayed as explanation in prompt during interactive run.
 ```
 
+Interpolation: `${name}` references are replaced from the stage (`${stage}`), any `-v/--variables` JSON, and — for the ssm provider — `${accountId}`, `${region}`, and every CloudFormation output of the stacks listed under `stacks:`. A reference with no value is an error. Only bare variable names are supported inside `${...}`.
+
+> **Note:** SSM secrets are always encrypted with the account-default `alias/aws/ssm` KMS key. A `secret.keyId` in the yml is not supported (v5 documented it but also ignored it); gayle warns if it is set.
+
 ### CLI
 
-Following is all options available in `gayle` CLI.
+Following is all options available in the `gayle` CLI.
 
 ```
-Usage: gayle [options] [command]
+Usage:
+  gayle [command]
 
-Options:
-  -V, --version          output the version number
-  -s, --stage [stage]    Specify stage to run on. (required)
-  -c, --config [config]  Path to gayle configuration (default: "gayle.yml")
-  -i, --interactive      specify values through command line
-  -h, --help             display help for command
+Available Commands:
+  clean-up    Cleaning up orphan configs or secrets
+  export      Export of all of the configuration from the provider to a text json file
+  fetch       Fetch config or secret
+  generate    Generate an example configuration file.
+  import      Import all of the configuration from the json from to a provider
+  init        Initialize gayle. Only required to run once.
+  list        List all remote configurations and secrets.
+  run         Verify or populate all remote configurations and secrets.
 
-Commands:
-  run [options]          Verify or populate all remote configurations and
-                         secrets.
-  init                   Initialize gayle. Only required to run once.
-  export [options]       Export of all of the configuration from the provider
-                         to a text json file
-  import [options]       Import all of the configuration from the json from to
-                         a provider
-  list                   List all remote configurations and secrets.
-  fetch [options]        Fetch config or secret
-  help [command]         display help for command
+Flags:
+  -c, --config string   Path to gayle configuration (default "gayle.yml")
+  -h, --help            help for gayle
+  -s, --stage string    Specify stage to run on. (required)
+  -V, --version         output the version number
 ```
 
 ### Push configuration
 
 ```
-Usage: gayle run [options]
+Usage:
+  gayle run [flags]
 
-Verify or populate all remote configurations and secrets.
-
-Options:
-  -v, --variables [variables]  Variables used for config interpolation.
-  -i, --interactive            Run on interactive mode
-  -m, --missing                Only prompt missing values in interactive mode
-  -r, --removing               Removing orphan configs or secrets
-  -h, --help                   display help for command
+Flags:
+  -i, --interactive        Run on interactive mode
+  -m, --missing            Only prompt missing values in interactive mode
+  -r, --removing           Removing orphan configs or secrets
+  -v, --variables string   Variables used for config interpolation.
 ```
+
+In non-interactive mode (the CI default), `run` writes the declared defaults and stage overrides, and **verifies** every `required` key already holds a remote value — it never invents values. Missing required keys are reported per key and the run exits 1.
 
 ### List pushed configurations
 
 ```
-Usage: gayle list [options]
-
-List all remote configurations and secrets.
-
-Options:
-  -h, --help  display help for command
+Usage:
+  gayle list [flags]
 ```
+
+Secrets are printed masked (all but the last four characters).
 
 ### Fetch individual configuration
 
 ```
-Usage: gayle fetch [options]
+Usage:
+  gayle fetch [flags]
 
-Fetch config or secret
-
-Options:
-  -k, --keys [keys]  Comma seperated configs to fetch (example:
-                     "SOME_CONFIG,ANOTHER_CONFIG")
-  -h, --help         display help for command
+Flags:
+  -k, --keys string   Comma separated configs to fetch (example: "SOME_CONFIG,ANOTHER_CONFIG")
 ```
 
-Fetch configuration can be used in automation scripts. Example:
+The JSON result is the only thing gayle ever writes to stdout — all diagnostics go to stderr — so it pipes cleanly:
 
 ```bash
-PARAMS=$(./node_modules/.bin/gayle fetch -k "CALLBACK_URL,LOGOUT_URL" -s $STAGE)
+PARAMS=$(gayle fetch -k "CALLBACK_URL,LOGOUT_URL" -s $STAGE)
 
 CALLBACK_URL=$(echo $PARAMS | jq -er ".CALLBACK_URL")
 LOGOUT_URL=$(echo $PARAMS | jq -er ".LOGOUT_URL")
@@ -183,46 +201,54 @@ LOGOUT_URL=$(echo $PARAMS | jq -er ".LOGOUT_URL")
 ### Import
 
 ```
-Usage: gayle import [options]
+Usage:
+  gayle import [flags]
 
-Import all of the configuration from the json from to a provider
-
-Options:
-  -p, --path [path]  The location of the secrets and configuration file
-                     (default: "/tmp/gayle-exports.json")
-  -h, --help         display help for command
+Flags:
+  -p, --path string   The location of the secrets and configuration file (default: "/tmp/gayle-exports.json")
 ```
 
 ### Export
 
 ```
-Usage: gayle export [options]
+Usage:
+  gayle export [flags]
 
-Export of all of the configuration from the provider to a text json file
-
-Options:
-  -p, --path [path]      The location for the output secrets & configuration file
-                         (default: "/tmp/gayle-exports.json" or ".env_gayle")
-  -t, --target [target]  The output target, available options are json|env
-                         (default:json)
-
-  -C, --config-only [configOnly] Only export `config` section
-
-  -h, --help             display help for command
+Flags:
+  -C, --config-only     Only export configs
+  -p, --path string     The location for the output secrets & configuration file (default: "/tmp/gayle-exports.json" or ".env_gayle")
+  -t, --target string   The output target, available options are json|env (default:json)
 ```
+
+> The `env` target writes values raw and unescaped inside double quotes — a value containing `"` or a newline breaks the file. This matches v5; treat the output as trusted-input-only.
 
 ### Clean up
 
 ```
-Usage: gayle clean-up [options]
+Usage:
+  gayle clean-up [flags]
 
-Clean up orphan configurations and secrets from provider
-
-Options:
-  -d, --dry-run [dryRun]  Execute a dry run to display all orphan configurations and secrets
-
-  -h, --help              display help for command
+Flags:
+  -d, --dry-run   Execute a dry run
 ```
+
+Deletes every remote parameter under the configured paths that is no longer declared in `gayle.yml`. Refuses to run when the configuration declares no keys at all (an empty declaration would prune everything). Requires both `config.path` and `secret.path`.
+
+## Changes from v5 (Node)
+
+The v6 rewrite keeps the CLI surface and output stable, with one deliberate theme: **exit codes are honest**. Exit 0 strictly means everything verifiably succeeded; expected failures exit 1; crashes exit 2.
+
+- Usage errors (unknown command/flag, missing `--stage`, missing `-k`) now exit 1 — v5 printed help and exited 0.
+- Partial provider failures report every failed key and exit 1; the run attempts all keys first.
+- Key Vault read errors other than 404 (auth, network, throttling) fail the run — v5 silently read them as empty values.
+- A CloudFormation `DescribeStacks` failure is a hard error — v5 swallowed it into a warning and empty outputs.
+- `fetch` errors on keys not declared in the configuration — v5 silently omitted them from the JSON.
+- `import` tolerates an empty `configs`/`secrets` section — v5 crashed.
+- `export --target` is validated (`json`/`env`); `generate`'s file write is checked.
+- `-r/--removing`, `-d/--dry-run`, and `-C/--config-only` are real boolean flags: use `-r` or `--removing=false`. v5's optional-value quirk meant `-r false` still deleted; that form is now a usage error.
+- A malformed `gayle.yml` reports the actual parse error — v5 claimed the file didn't exist.
+
+Installation is via Homebrew/Scoop/direct download (above). The `@driverforge/gayle` npm package is deprecated and frozen at v5.
 
 ### License
 
