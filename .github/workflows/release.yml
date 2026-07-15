@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the GitHub Release
+
+env:
+  AZURE_STORAGE_CONTAINER: driverforge-releases
+  ARTIFACT_PATH: gayle
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the changelog
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      # Short-lived installation token for pushing the Homebrew cask and Scoop
+      # manifest — the workflow's own GITHUB_TOKEN can't write outside this repo.
+      # Minted from the driverforge-bot GitHub App (org-wide client-id/key pair),
+      # scoped to exactly the two tap repos, valid for one hour. The app's
+      # installation must cover both repos with Contents read/write.
+      - name: Mint tap token from driverforge-bot
+        id: tap-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.DRIVERFORGE_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.DRIVERFORGE_BOT_PRIVATE_KEY }}
+          owner: driverforge
+          repositories: |
+            homebrew-tap
+            scoop-bucket
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          # Creates the (internal/mirror) release in this repo.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Pushes the cask/manifest to homebrew-tap and scoop-bucket (see above).
+          TAP_GITHUB_TOKEN: ${{ steps.tap-token.outputs.token }}
+          # Canonical artifact upload to Azure (the `blobs` stage). Account name is a
+          # non-sensitive repo variable; only the key is a secret.
+          AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+          # macOS signing + notarization. Keep these COMMENTED OUT until the secrets exist:
+          # GitHub exports a missing secret as an empty string, which would still flip
+          # `isEnvSet` on and break the release. Uncomment all five once the secrets are
+          # added (Developer ID .p12 + App Store Connect .p8 API key, both base64-encoded).
+          # MACOS_SIGN_P12: ${{ secrets.MACOS_SIGN_P12 }}
+          # MACOS_SIGN_PASSWORD: ${{ secrets.MACOS_SIGN_PASSWORD }}
+          # MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+          # MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          # MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+
+      # GoReleaser uploaded the versioned archives + checksums to Azure. This step
+      # publishes the release manifest — to both the immutable versioned path and
+      # the mutable `latest/` pointer — mirroring the driverforge CLI pipeline
+      # (same schema: version/tag/commit/releasedAt/artifacts).
+      - name: Publish release manifest to Azure
+        uses: azure/cli@v2
+        env:
+          AZURE_STORAGE_ACCOUNT: ${{ vars.AZURE_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+        with:
+          inlineScript: |
+            set -euo pipefail
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
+            BASE_URL="https://releases.driverforge.com/$AZURE_STORAGE_CONTAINER/$ARTIFACT_PATH/$TAG"
+
+            # Build the artifacts[] array from the archives GoReleaser produced.
+            artifacts="$(cd dist && for f in *.tar.gz *.zip; do
+              [ -e "$f" ] || continue
+              jq -n --arg n "$f" --arg u "$BASE_URL/$f" '{name: $n, url: $u}'
+            done | jq -s '.')"
+
+            jq -n \
+              --arg version "$VERSION" \
+              --arg tag "$TAG" \
+              --arg commit "$GITHUB_SHA" \
+              --arg releasedAt "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+              --argjson artifacts "$artifacts" \
+              '{version: $version, tag: $tag, commit: $commit, releasedAt: $releasedAt, artifacts: $artifacts}' \
+              > manifest.json
+
+            az storage blob upload -c "$AZURE_STORAGE_CONTAINER" \
+              -n "$ARTIFACT_PATH/$TAG/manifest.json" -f manifest.json \
+              --content-cache-control "public, max-age=31536000, immutable" --overwrite
+            az storage blob upload -c "$AZURE_STORAGE_CONTAINER" \
+              -n "$ARTIFACT_PATH/latest/manifest.json" -f manifest.json \
+              --content-cache-control "no-cache, must-revalidate" --overwrite
