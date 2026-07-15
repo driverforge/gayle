@@ -9,7 +9,9 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  # Named `build` to satisfy the main ruleset's required status check (the
+  # name carried over from the Node workflow it replaced).
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
