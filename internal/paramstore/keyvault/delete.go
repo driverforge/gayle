@@ -22,6 +22,12 @@ func (s *Store) DeleteParameters(ctx context.Context, names []string) error {
 	for _, name := range names {
 		kvName := ToKeyVaultName(name)
 		if _, err := s.client.DeleteSecret(ctx, kvName, nil); err != nil {
+			// Already absent is pruning's goal state, not a failure
+			// (DF-659).
+			if isNotFound(err) {
+				delete(s.cache, name)
+				continue
+			}
 			errs = append(errs, paramstore.KeyError{Key: name, Err: err})
 			continue
 		}
