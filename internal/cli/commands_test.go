@@ -340,6 +340,49 @@ func TestCleanUpDeleteFailureExitsNonZero(t *testing.T) {
 	}
 }
 
+func TestCleanUpKeepsStageOverrideOnlyKeys(t *testing.T) {
+	// DF-659: populateConfig writes defaults + stage overrides merged, so a
+	// key declared only under config.<stage> is a live parameter, not an
+	// orphan. Cleanup treating it as undeclared deleted every stage-only
+	// production key right after `run -r` wrote it.
+	s := fixtureSettings()
+	s.Config.StageOverrides = map[string]string{"SENTRY_DSN": "https://ingest.example/1"}
+	st := &fake.Store{}
+	seed(st)
+	st.Set("/dev/config/SENTRY_DSN", "https://ingest.example/1", paramstore.TypeString)
+	if _, err := run(t, testDeps(s, st), "clean-up", "-s", "dev"); err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Deleted) != 0 {
+		t.Errorf("stage-override keys must survive cleanup, deleted: %v", st.Deleted)
+	}
+	if _, ok := st.Values["/dev/config/SENTRY_DSN"]; !ok {
+		t.Errorf("stage-override parameter removed from store")
+	}
+}
+
+func TestCleanUpSharedPathDeletesOrphanOnce(t *testing.T) {
+	// Key Vault gayle.ymls commonly point config.path and secret.path at
+	// the same prefix. Listing both paths without dedupe queued every
+	// orphan twice; the duplicate delete then 404'd and failed the run
+	// (DF-659).
+	s := fixtureSettings()
+	s.Config.Path = "/dev/app"
+	s.Secret.Path = "/dev/app"
+	s.ConfigParameters = []string{"/dev/app/DB_HOST"}
+	s.SecretParameters = []string{"/dev/app/DB_PASSWORD"}
+	st := &fake.Store{}
+	st.Set("/dev/app/DB_HOST", "3200", paramstore.TypeString)
+	st.Set("/dev/app/DB_PASSWORD", "hunter2hunter2", paramstore.TypeSecureString)
+	st.Set("/dev/app/ORPHAN", "old", paramstore.TypeString)
+	if _, err := run(t, testDeps(s, st), "clean-up", "-s", "dev"); err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Deleted) != 1 || st.Deleted[0] != "/dev/app/ORPHAN" {
+		t.Errorf("orphan must be deleted exactly once, got %v", st.Deleted)
+	}
+}
+
 func TestGenerateWritesTemplateAndRefusesSecond(t *testing.T) {
 	t.Chdir(t.TempDir())
 	st := &fake.Store{}

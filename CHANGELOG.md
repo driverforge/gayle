@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Fixed
+- **`clean-up` (and `run --removing`) no longer deletes stage-override-only
+  config keys.** Keys declared only under `config.<stage>` are written by
+  `run` (defaults + overrides merged) but were excluded from the declared
+  set the pruner diffs against, so every `run --removing` deleted the
+  parameters it had just written — in production this purged all stage-only
+  config for two deployed services before being caught (driverforge
+  DF-659). The pruner now counts `config.<stage>` keys as declared. The
+  v5-parity exclusion of override-only keys from `list`/`fetch` scope is
+  unchanged.
+- `clean-up` no longer lists a shared path twice when `config.path` and
+  `secret.path` are identical (the norm for Key Vault declarations). The
+  duplicate listing queued every orphan for a second delete, which 404'd
+  and failed the run.
+- Key Vault: a 404 on delete is treated as already-pruned instead of a
+  per-key failure. SSM behavior (missing names reported via
+  `InvalidParameters`) is unchanged.
+
 ## [6.0.0](2026-07-15)
 
 Gayle is now a Go binary. The Node.js implementation and npm distribution are

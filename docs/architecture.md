@@ -56,7 +56,7 @@ internal/ui          All output. Log lines: stderr, "Gayle: " prefix,
 | Quirk | Where | Why it stays |
 |---|---|---|
 | `defaults` override freshly prompted values (merge: prompt < defaults < stage overrides) | cli/configure.go | Pipelines rely on defaults winning; changing it changes deployed values. |
-| Stage-override blocks affect only config population; override-only keys are NOT in ConfigParameters (not listed/fetched/cleaned) | settings/derive.go | Changing it changes list/fetch/clean-up scope. |
+| Stage-override blocks affect only config population; override-only keys are NOT in ConfigParameters (not listed/fetched) | settings/derive.go | Changing it changes list/fetch scope. **Deliberate deviation (DF-659):** clean-up DOES count stage-override keys as declared — populate writes them, so pruning them deleted parameters the same run had just written. |
 | `secret.keyId` ignored; SSM secrets always `alias/aws/ssm` (warning when set) | paramstore/ssm/put.go, cli/deps.go | Honoring it would silently re-encrypt existing parameters. |
 | env export values unescaped inside `"…"` | cli/export.go | Existing consumers parse the v5 format. |
 | Export/import defaults `/tmp/gayle-exports.json` / `.env_gayle` | cli/export.go | Pipelines hardcode the paths. |

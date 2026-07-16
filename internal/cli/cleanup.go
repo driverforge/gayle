@@ -40,6 +40,15 @@ func newCleanUpCmd(d *deps) *cobra.Command {
 // Also invoked by `run -r` (which never dry-runs — Node parity).
 func cleanUp(ctx context.Context, d *deps, s *settings.Settings, dryRun bool) error {
 	declared := append(append([]string{}, s.ConfigParameters...), s.SecretParameters...)
+	// Stage-override keys are absent from ConfigParameters (v5 parity, see
+	// derive.go) but populateConfig writes them — cleanup must count them
+	// as declared or `run -r` deletes parameters it wrote moments earlier
+	// (DF-659).
+	if s.Config != nil {
+		for k := range s.Config.StageOverrides {
+			declared = append(declared, s.Config.Path+"/"+k)
+		}
+	}
 
 	// DF-644 guard: an empty or misparsed configuration would classify every
 	// remote parameter under the configured paths as unused and delete the lot.
@@ -65,15 +74,20 @@ func cleanUp(ctx context.Context, d *deps, s *settings.Settings, dryRun bool) er
 		return userErr(err)
 	}
 
-	configs, err := store.GetAllByPath(ctx, configPath)
+	remote, err := store.GetAllByPath(ctx, configPath)
 	if err != nil {
 		return userErr(err)
 	}
-	secrets, err := store.GetAllByPath(ctx, secretPath)
-	if err != nil {
-		return userErr(err)
+	// Key Vault declarations routinely share one path for config and
+	// secrets; listing it twice queued every orphan for a double delete
+	// whose second attempt 404'd (DF-659).
+	if secretPath != configPath {
+		secrets, err := store.GetAllByPath(ctx, secretPath)
+		if err != nil {
+			return userErr(err)
+		}
+		remote = append(remote, secrets...)
 	}
-	remote := append(configs, secrets...)
 
 	var unused []paramstore.Parameter
 	for _, p := range remote {

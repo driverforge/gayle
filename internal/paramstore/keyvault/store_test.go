@@ -354,6 +354,22 @@ func TestDeletePurgeAsymmetry(t *testing.T) {
 	}
 }
 
+func TestDeleteAlreadyGoneIsNotAnError(t *testing.T) {
+	// DF-659: a 404 from DeleteSecret means the secret is already absent —
+	// pruning's goal state, not a failure.
+	f := newFake()
+	f.secrets["graph--OK"] = fakeSecret{value: "a"}
+	f.deleteErr["graph--GONE"] = notFoundErr()
+	s := newTestStore(f)
+
+	if err := s.DeleteParameters(context.Background(), []string{"graph/GONE", "graph/OK"}); err != nil {
+		t.Fatalf("already-deleted secret must not fail the batch: %v", err)
+	}
+	if _, live := f.secrets["graph--OK"]; live {
+		t.Errorf("remaining live secret must still be deleted")
+	}
+}
+
 func TestDeleteWaitsForSoftDelete(t *testing.T) {
 	f := newFake()
 	f.secrets["graph--SLOW"] = fakeSecret{value: "a"}
