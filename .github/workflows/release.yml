@@ -25,7 +25,7 @@ jobs:
     # public repo; the app private key must not be in plain repo/org scope.
     environment: release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # full history for the changelog
 
