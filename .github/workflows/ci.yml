@@ -32,3 +32,12 @@ jobs:
 
       - name: test
         run: go test -race -shuffle=on ./...
+
+      # Symbol-level vulnerability reachability: fails only when our code
+      # actually calls (or is compiled against) vulnerable code — including
+      # stdlib/toolchain vulns dependabot can't see — and stays quiet on
+      # module-level advisories whose code we never use. A failure here with
+      # no diff usually means a new advisory landed in the vuln DB; triage
+      # with `govulncheck -show verbose ./...`.
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
