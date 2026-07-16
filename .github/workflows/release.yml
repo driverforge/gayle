@@ -42,7 +42,7 @@ jobs:
       # must cover both tap repos with Contents read/write.
       - name: Mint tap token from driverforge-bot
         id: tap-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ vars.DRIVERFORGE_BOT_CLIENT_ID }}
           private-key: ${{ secrets.DRIVERFORGE_BOT_PRIVATE_KEY }}
