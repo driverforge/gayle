@@ -56,6 +56,12 @@ jobs:
           version: "~> v2"
           args: release --clean
         env:
+          # Pin the tag GoReleaser releases. When an rc and its stable tag
+          # point at the same commit (no changes between them), GoReleaser's
+          # current-tag guess can pick the wrong one — the v6.0.0 run once
+          # built rc1 artifacts and tried to upload them to the immutable rc
+          # release. The workflow's ref IS the tag (guarded above).
+          GORELEASER_CURRENT_TAG: ${{ github.ref_name }}
           # Creates the (internal/mirror) release in this repo.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Pushes the cask/manifest to homebrew-tap and scoop-bucket (see above).
