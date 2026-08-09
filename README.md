@@ -160,13 +160,19 @@ Usage:
   gayle run [flags]
 
 Flags:
+  -C, --config-only        Only populate configs; skip secrets entirely
   -i, --interactive        Run on interactive mode
   -m, --missing            Only prompt missing values in interactive mode
   -r, --removing           Removing orphan configs or secrets
+  -S, --secrets-only       Only populate secrets; skip configs entirely
   -v, --variables string   Variables used for config interpolation.
 ```
 
 In non-interactive mode (the CI default), `run` writes the declared defaults and stage overrides, and **verifies** every `required` key already holds a remote value — it never invents values. Missing required keys are reported per key and the run exits 1.
+
+`--config-only` and `--secrets-only` run one half of the declaration and skip the other entirely — the skipped half is never read, prompted for, or written. `secret.required` is declared per service, so a stage that sources its secrets elsewhere (a per-PR `ExternalSecret`, an in-cluster generator) can push config with `gayle run -s preview --config-only` and exit 0 instead of failing the required-secret check. The two flags cannot be combined, and `--config-only` against a gayle.yml with no `config:` block is an error rather than a silent success.
+
+With `-r/--removing`, the prune follows the same scope: `--config-only --removing` prunes orphan configs and never touches secrets. When `config.path` and `secret.path` are the same prefix (common for Key Vault) an orphan cannot be attributed to either half, so a restricted prune refuses rather than guess.
 
 ### List pushed configurations
 

@@ -72,10 +72,12 @@ func TestFlagSurface(t *testing.T) {
 
 	wantCmd := map[string]map[string]f{
 		"run": {
-			"variables":   {"v", ""},
-			"interactive": {"i", "false"},
-			"missing":     {"m", "false"},
-			"removing":    {"r", "false"},
+			"variables":    {"v", ""},
+			"interactive":  {"i", "false"},
+			"missing":      {"m", "false"},
+			"removing":     {"r", "false"},
+			"config-only":  {"C", "false"},
+			"secrets-only": {"S", "false"},
 		},
 		"export": {
 			"path":        {"p", ""},

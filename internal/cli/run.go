@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -17,6 +18,8 @@ func newRunCmd(d *deps) *cobra.Command {
 		flagInteractive bool
 		flagMissing     bool
 		flagRemoving    bool
+		flagConfigOnly  bool
+		flagSecretsOnly bool
 	)
 	cmd := &cobra.Command{
 		Use:   "run",
@@ -24,6 +27,19 @@ func newRunCmd(d *deps) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
+
+			// Resolved here (rather than checked with cobra's flag groups) so
+			// the clash renders as a usage error and exits 1, not 2.
+			if flagConfigOnly && flagSecretsOnly {
+				return usageError(cmd, errors.New("--config-only and --secrets-only cannot be combined"))
+			}
+			mode := populateBoth
+			switch {
+			case flagConfigOnly:
+				mode = populateConfigsOnly
+			case flagSecretsOnly:
+				mode = populateSecretsOnly
+			}
 
 			if flagInteractive && !ui.Interactive() {
 				return clierr.UserT("No TTY",
@@ -42,11 +58,11 @@ func newRunCmd(d *deps) *cobra.Command {
 			}
 			// The Node `init` step ran here; it was a no-op beyond forcing the
 			// settings load above.
-			if err := configure(ctx, d, s, flagInteractive, flagMissing); err != nil {
+			if err := configure(ctx, d, s, flagInteractive, flagMissing, mode); err != nil {
 				return err
 			}
 			if flagRemoving {
-				if err := cleanUp(ctx, d, s, false); err != nil {
+				if err := cleanUp(ctx, d, s, false, mode); err != nil {
 					return err
 				}
 			}
@@ -58,6 +74,8 @@ func newRunCmd(d *deps) *cobra.Command {
 	cmd.Flags().BoolVarP(&flagInteractive, "interactive", "i", false, "Run on interactive mode")
 	cmd.Flags().BoolVarP(&flagMissing, "missing", "m", false, "Only prompt missing values in interactive mode")
 	cmd.Flags().BoolVarP(&flagRemoving, "removing", "r", false, "Removing orphan configs or secrets")
+	cmd.Flags().BoolVarP(&flagConfigOnly, "config-only", "C", false, "Only populate configs; skip secrets entirely")
+	cmd.Flags().BoolVarP(&flagSecretsOnly, "secrets-only", "S", false, "Only populate secrets; skip configs entirely")
 	return cmd
 }
 
