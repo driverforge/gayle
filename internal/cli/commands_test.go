@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -157,6 +158,204 @@ func TestRunRemovingCleansUp(t *testing.T) {
 	}
 	if len(st.Deleted) != 1 || st.Deleted[0] != "/dev/config/ORPHAN" {
 		t.Errorf("run -r must delete orphans: %v", st.Deleted)
+	}
+}
+
+// readNames reports whether any GetParameters call asked for name.
+func readNames(st *fake.Store, name string) bool {
+	for _, call := range st.GetCalls {
+		if slices.Contains(call, name) {
+			return true
+		}
+	}
+	return false
+}
+
+// seedConfigs seeds only the config half — the shape that motivates
+// --config-only: secret.required keys are supplied elsewhere (a per-PR
+// ExternalSecret, an in-cluster generator) and never exist under this path.
+func seedConfigs(st *fake.Store) {
+	st.Set("/dev/config/DB_NAME", "my-database", paramstore.TypeString)
+	st.Set("/dev/config/DB_HOST", "3200", paramstore.TypeString)
+	st.Set("/dev/config/DB_TABLE", "the-table", paramstore.TypeString)
+}
+
+func TestRunConfigOnlyWritesConfigAndNeverTouchesSecrets(t *testing.T) {
+	st := &fake.Store{}
+	seed(st)
+	st.Set("/dev/config/DB_NAME", "drifted", paramstore.TypeString)
+
+	if _, err := run(t, testDeps(fixtureSettings(), st), "run", "-s", "dev", "--config-only"); err != nil {
+		t.Fatal(err)
+	}
+	if st.Values["/dev/config/DB_NAME"] != "my-database" {
+		t.Errorf("config not written: %q", st.Values["/dev/config/DB_NAME"])
+	}
+	if readNames(st, "/dev/secret/DB_PASSWORD") {
+		t.Errorf("--config-only must not read the secret store: %v", st.GetCalls)
+	}
+	if len(st.PutSecretCalls) != 0 {
+		t.Errorf("--config-only must not write secrets: %v", st.PutSecretCalls)
+	}
+}
+
+// The case that motivates the flag: required secrets absent remotely no longer
+// fail the run once the caller has opted out of the secret half.
+func TestRunConfigOnlySucceedsWithRequiredSecretsAbsent(t *testing.T) {
+	st := &fake.Store{}
+	seedConfigs(st) // DB_PASSWORD deliberately never seeded
+
+	if _, err := run(t, testDeps(fixtureSettings(), st), "run", "-s", "dev", "-C"); err != nil {
+		t.Fatalf("--config-only must exit 0 with required secrets missing: %v", err)
+	}
+	// Without the flag the same store is a hard failure — the behaviour the
+	// flag exists to opt out of.
+	st2 := &fake.Store{}
+	seedConfigs(st2)
+	if _, err := run(t, testDeps(fixtureSettings(), st2), "run", "-s", "dev"); err == nil {
+		t.Errorf("default behaviour must still fail on missing required secrets")
+	}
+}
+
+// A secrets-only run is the mirror image: configs are neither read nor written.
+func TestRunSecretsOnlyWritesSecretsAndNeverTouchesConfigs(t *testing.T) {
+	st := &fake.Store{}
+	seed(st)
+	st.Set("/dev/secret/DB_PASSWORD", "drifted", paramstore.TypeSecureString)
+
+	if _, err := run(t, testDeps(fixtureSettings(), st), "run", "-s", "dev", "-S"); err != nil {
+		t.Fatal(err)
+	}
+	if readNames(st, "/dev/config/DB_NAME") {
+		t.Errorf("--secrets-only must not read the config store: %v", st.GetCalls)
+	}
+	if len(st.PutConfigCalls) != 0 {
+		t.Errorf("--secrets-only must not write configs: %v", st.PutConfigCalls)
+	}
+}
+
+func TestRunConfigOnlyRemovingLeavesSecretsAlone(t *testing.T) {
+	st := &fake.Store{}
+	seed(st)
+	st.Set("/dev/config/ORPHAN", "old", paramstore.TypeString)
+	st.Set("/dev/secret/OLD_KEY", "x", paramstore.TypeSecureString)
+
+	if _, err := run(t, testDeps(fixtureSettings(), st), "run", "-s", "dev", "-r", "--config-only"); err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Deleted) != 1 || st.Deleted[0] != "/dev/config/ORPHAN" {
+		t.Errorf("--config-only --removing must prune configs only, deleted: %v", st.Deleted)
+	}
+	if _, ok := st.Values["/dev/secret/OLD_KEY"]; !ok {
+		t.Errorf("orphan secret deleted by a config-only prune — data loss")
+	}
+	if slices.Contains(st.GetPathCalls, "/dev/secret") {
+		t.Errorf("--config-only must not even list the secret path: %v", st.GetPathCalls)
+	}
+}
+
+func TestRunSecretsOnlyRemovingLeavesConfigsAlone(t *testing.T) {
+	st := &fake.Store{}
+	seed(st)
+	st.Set("/dev/config/ORPHAN", "old", paramstore.TypeString)
+	st.Set("/dev/secret/OLD_KEY", "x", paramstore.TypeSecureString)
+
+	if _, err := run(t, testDeps(fixtureSettings(), st), "run", "-s", "dev", "-r", "-S"); err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Deleted) != 1 || st.Deleted[0] != "/dev/secret/OLD_KEY" {
+		t.Errorf("--secrets-only --removing must prune secrets only, deleted: %v", st.Deleted)
+	}
+	if _, ok := st.Values["/dev/config/ORPHAN"]; !ok {
+		t.Errorf("orphan config deleted by a secrets-only prune")
+	}
+}
+
+// A shared config/secret path (the Key Vault norm) makes orphan attribution
+// impossible, so a restricted prune must refuse rather than guess.
+func TestRunConfigOnlyRemovingRefusesSharedPath(t *testing.T) {
+	s := fixtureSettings()
+	s.Config.Path = "/dev/app"
+	s.Config.Defaults = map[string]string{"DB_HOST": "3200"}
+	s.Config.Required = nil
+	s.Secret.Path = "/dev/app"
+	s.ConfigParameters = []string{"/dev/app/DB_HOST"}
+	s.SecretParameters = []string{"/dev/app/DB_PASSWORD"}
+	st := &fake.Store{}
+	st.Set("/dev/app/DB_HOST", "3200", paramstore.TypeString)
+	st.Set("/dev/app/ORPHAN", "old", paramstore.TypeString)
+
+	_, err := run(t, testDeps(s, st), "run", "-s", "dev", "-r", "--config-only")
+	if err == nil || !strings.Contains(err.Error(), "cannot prune orphans") {
+		t.Fatalf("shared-path restricted prune must refuse: %v", err)
+	}
+	if !clierr.IsUser(err) {
+		t.Errorf("must be a UserError (exit 1)")
+	}
+	if len(st.Deleted) != 0 {
+		t.Errorf("refused prune must not delete: %v", st.Deleted)
+	}
+}
+
+func TestRunConfigOnlyWithoutConfigBlockErrors(t *testing.T) {
+	s := fixtureSettings()
+	s.Config = nil
+	s.ConfigParameters = nil
+	st := &fake.Store{}
+	seed(st)
+
+	_, err := run(t, testDeps(s, st), "run", "-s", "dev", "--config-only")
+	if err == nil || !strings.Contains(err.Error(), "no 'config:' block") {
+		t.Fatalf("--config-only against a secrets-only declaration must error: %v", err)
+	}
+	if !clierr.IsUser(err) {
+		t.Errorf("must be a UserError (exit 1)")
+	}
+	if len(st.PutConfigCalls)+len(st.PutSecretCalls) != 0 {
+		t.Errorf("must not write anything")
+	}
+}
+
+func TestRunSecretsOnlyWithoutSecretBlockErrors(t *testing.T) {
+	s := fixtureSettings()
+	s.Secret = nil
+	s.SecretParameters = nil
+	st := &fake.Store{}
+	seed(st)
+
+	_, err := run(t, testDeps(s, st), "run", "-s", "dev", "--secrets-only")
+	if err == nil || !strings.Contains(err.Error(), "no 'secret:' block") {
+		t.Fatalf("--secrets-only against a config-only declaration must error: %v", err)
+	}
+}
+
+func TestRunConfigOnlyAndSecretsOnlyAreExclusive(t *testing.T) {
+	st := &fake.Store{}
+	seed(st)
+	_, err := run(t, testDeps(fixtureSettings(), st), "run", "-s", "dev", "-C", "-S")
+	if err == nil || !strings.Contains(err.Error(), "cannot be combined") {
+		t.Fatalf("both flags together must be a usage error: %v", err)
+	}
+	if !clierr.IsUser(err) {
+		t.Errorf("must be a UserError (exit 1)")
+	}
+}
+
+// Without either flag, run still does both halves — reads and writes secrets.
+func TestRunDefaultStillPopulatesBothHalves(t *testing.T) {
+	st := &fake.Store{}
+	seed(st)
+	st.Set("/dev/config/DB_NAME", "drifted", paramstore.TypeString)
+	st.Set("/dev/secret/DB_PASSWORD", "drifted", paramstore.TypeSecureString)
+
+	if _, err := run(t, testDeps(fixtureSettings(), st), "run", "-s", "dev"); err != nil {
+		t.Fatal(err)
+	}
+	if !readNames(st, "/dev/secret/DB_PASSWORD") {
+		t.Errorf("default run must read secrets: %v", st.GetCalls)
+	}
+	if st.Values["/dev/config/DB_NAME"] != "my-database" || len(st.PutSecretCalls) != 1 {
+		t.Errorf("default run must populate both halves")
 	}
 }
 

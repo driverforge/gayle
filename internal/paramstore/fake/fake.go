@@ -22,6 +22,8 @@ type Store struct {
 	DeleteErr map[string]error // per-key delete failures
 
 	// Recorded activity.
+	GetCalls       [][]string // names passed to each GetParameters
+	GetPathCalls   []string   // paths passed to each GetAllByPath
 	PutConfigCalls []map[string]string
 	PutSecretCalls []map[string]string
 	Deleted        []string
@@ -47,6 +49,7 @@ func (s *Store) Set(name, value string, t paramstore.ParamType) {
 
 func (s *Store) GetParameters(_ context.Context, names []string) (map[string]string, error) {
 	s.init()
+	s.GetCalls = append(s.GetCalls, names)
 	if s.GetErr != nil {
 		return nil, s.GetErr
 	}
@@ -59,6 +62,7 @@ func (s *Store) GetParameters(_ context.Context, names []string) (map[string]str
 
 func (s *Store) GetAllByPath(_ context.Context, path string) ([]paramstore.Parameter, error) {
 	s.init()
+	s.GetPathCalls = append(s.GetPathCalls, path)
 	if s.GetErr != nil {
 		return nil, s.GetErr
 	}

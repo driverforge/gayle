@@ -11,22 +11,83 @@ import (
 	"github.com/driverforge/gayle/internal/ui"
 )
 
-// configure is the heart of `gayle run`: populate configs, then secrets.
-func configure(ctx context.Context, d *deps, s *settings.Settings, interactive, missingOnly bool) error {
-	mode := "non-interactive"
-	if interactive {
-		mode = "interactive"
+// populateMode selects which halves of the declaration `run` acts on.
+// --config-only and --secrets-only resolve to a single value here so the two
+// can never both be in force, and so population and pruning read the same
+// scope. It gates whole halves, not prompting: -i still applies to whichever
+// half runs.
+type populateMode int
+
+const (
+	populateBoth populateMode = iota
+	populateConfigsOnly
+	populateSecretsOnly
+)
+
+func (m populateMode) configs() bool { return m != populateSecretsOnly }
+func (m populateMode) secrets() bool { return m != populateConfigsOnly }
+
+// flag names the flag that selected a restricted mode, for message text.
+func (m populateMode) flag() string {
+	switch m {
+	case populateConfigsOnly:
+		return "--config-only"
+	case populateSecretsOnly:
+		return "--secrets-only"
 	}
-	ui.Log(ui.Cyan(fmt.Sprintf("Running Gayle in %s mode..", mode)))
+	return ""
+}
+
+// configure is the heart of `gayle run`: populate configs, then secrets —
+// or just the half mode selects.
+func configure(ctx context.Context, d *deps, s *settings.Settings, interactive, missingOnly bool, mode populateMode) error {
+	if err := checkMode(s, mode); err != nil {
+		return err
+	}
+
+	modeName := "non-interactive"
+	if interactive {
+		modeName = "interactive"
+	}
+	ui.Log(ui.Cyan(fmt.Sprintf("Running Gayle in %s mode..", modeName)))
 
 	store, err := d.Store(ctx, s)
 	if err != nil {
 		return userErr(err)
 	}
-	if err := populateConfig(ctx, store, s, interactive, missingOnly); err != nil {
-		return err
+
+	if mode.configs() {
+		if err := populateConfig(ctx, store, s, interactive, missingOnly); err != nil {
+			return err
+		}
+	} else {
+		ui.Log(ui.White("Skipping population of config (--secrets-only)..."))
+	}
+
+	if !mode.secrets() {
+		// Logged explicitly so a CI log shows the omission was deliberate
+		// rather than a silent no-op.
+		ui.Log(ui.White("Skipping population of secrets (--config-only)..."))
+		return nil
 	}
 	return populateSecret(ctx, store, s, interactive, missingOnly)
+}
+
+// checkMode rejects a restricted run against a declaration that has no such
+// half: `run --config-only` on a secrets-only gayle.yml would otherwise write
+// nothing and exit 0, hiding the mistake.
+func checkMode(s *settings.Settings, mode populateMode) error {
+	switch {
+	case mode == populateConfigsOnly && s.Config == nil:
+		return clierr.UserT("Nothing to populate",
+			"--config-only was passed but gayle.yml declares no 'config:' block.",
+			"add a 'config:' block, or drop --config-only")
+	case mode == populateSecretsOnly && s.Secret == nil:
+		return clierr.UserT("Nothing to populate",
+			"--secrets-only was passed but gayle.yml declares no 'secret:' block.",
+			"add a 'secret:' block, or drop --secrets-only")
+	}
+	return nil
 }
 
 func populateConfig(ctx context.Context, store paramstore.Store, s *settings.Settings, interactive, missingOnly bool) error {

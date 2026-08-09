@@ -25,7 +25,7 @@ func newCleanUpCmd(d *deps) *cobra.Command {
 			if err != nil {
 				return userErr(err)
 			}
-			if err := cleanUp(ctx, d, s, flagDryRun); err != nil {
+			if err := cleanUp(ctx, d, s, flagDryRun, populateBoth); err != nil {
 				return err
 			}
 			logDone()
@@ -37,23 +37,37 @@ func newCleanUpCmd(d *deps) *cobra.Command {
 }
 
 // cleanUp prunes remote parameters that no longer appear in the declaration.
-// Also invoked by `run -r` (which never dry-runs — Node parity).
-func cleanUp(ctx context.Context, d *deps, s *settings.Settings, dryRun bool) error {
-	declared := append(append([]string{}, s.ConfigParameters...), s.SecretParameters...)
+// Also invoked by `run -r` (which never dry-runs — Node parity), passing that
+// run's populateMode so a restricted run prunes only the half it populated.
+func cleanUp(ctx context.Context, d *deps, s *settings.Settings, dryRun bool, mode populateMode) error {
+	configDeclared := append([]string{}, s.ConfigParameters...)
 	// Stage-override keys are absent from ConfigParameters (v5 parity, see
 	// derive.go) but populateConfig writes them — cleanup must count them
 	// as declared or `run -r` deletes parameters it wrote moments earlier
 	// (DF-659).
 	if s.Config != nil {
 		for k := range s.Config.StageOverrides {
-			declared = append(declared, s.Config.Path+"/"+k)
+			configDeclared = append(configDeclared, s.Config.Path+"/"+k)
 		}
 	}
+	secretDeclared := append([]string{}, s.SecretParameters...)
+	// Everything declared is protected whatever the mode; the mode narrows
+	// which paths are listed for orphans, never which keys are safe.
+	declared := append(append([]string{}, configDeclared...), secretDeclared...)
 
 	// DF-644 guard: an empty or misparsed configuration would classify every
 	// remote parameter under the configured paths as unused and delete the lot.
-	if len(declared) == 0 {
-		return clierr.User("Cleanup refused: the configuration declares no config or secret keys. "+
+	// The guard applies to the half being pruned — a config-only prune against
+	// a config block that declares nothing is the same hazard.
+	scoped, what := declared, "config or secret"
+	switch mode {
+	case populateConfigsOnly:
+		scoped, what = configDeclared, "config"
+	case populateSecretsOnly:
+		scoped, what = secretDeclared, "secret"
+	}
+	if len(scoped) == 0 {
+		return clierr.User(fmt.Sprintf("Cleanup refused: the configuration declares no %s keys. ", what)+
 			"Pruning against an empty declaration would delete every remote parameter under the configured paths.", "")
 	}
 
@@ -64,9 +78,28 @@ func cleanUp(ctx context.Context, d *deps, s *settings.Settings, dryRun bool) er
 	if s.Secret != nil {
 		secretPath = s.Secret.Path
 	}
-	// Cleanup reads both paths (Node parity) and errors when either is unset.
-	if configPath == "" || secretPath == "" {
-		return clierr.User("Cleanup requires both 'config.path' and 'secret.path' to be set in gayle.yml.", "")
+	switch mode {
+	case populateConfigsOnly:
+		if configPath == "" {
+			return clierr.User("Cleanup requires 'config.path' to be set in gayle.yml.", "")
+		}
+	case populateSecretsOnly:
+		if secretPath == "" {
+			return clierr.User("Cleanup requires 'secret.path' to be set in gayle.yml.", "")
+		}
+	default:
+		// Cleanup reads both paths (Node parity) and errors when either is unset.
+		if configPath == "" || secretPath == "" {
+			return clierr.User("Cleanup requires both 'config.path' and 'secret.path' to be set in gayle.yml.", "")
+		}
+	}
+	// A shared path (the norm for Key Vault) makes "orphan config" and "orphan
+	// secret" indistinguishable by name, so a restricted prune cannot keep its
+	// promise to leave the other half alone. Refuse rather than guess.
+	if mode != populateBoth && configPath != "" && configPath == secretPath {
+		return clierr.UserT("Cleanup scope is ambiguous",
+			fmt.Sprintf("%s cannot prune orphans: 'config.path' and 'secret.path' are both %s, so an orphan cannot be attributed to configs or secrets.", mode.flag(), configPath),
+			"drop --removing, or give configs and secrets separate paths")
 	}
 
 	store, err := d.Store(ctx, s)
@@ -74,14 +107,18 @@ func cleanUp(ctx context.Context, d *deps, s *settings.Settings, dryRun bool) er
 		return userErr(err)
 	}
 
-	remote, err := store.GetAllByPath(ctx, configPath)
-	if err != nil {
-		return userErr(err)
+	var remote []paramstore.Parameter
+	if mode.configs() {
+		configs, err := store.GetAllByPath(ctx, configPath)
+		if err != nil {
+			return userErr(err)
+		}
+		remote = configs
 	}
 	// Key Vault declarations routinely share one path for config and
 	// secrets; listing it twice queued every orphan for a double delete
 	// whose second attempt 404'd (DF-659).
-	if secretPath != configPath {
+	if mode.secrets() && secretPath != configPath {
 		secrets, err := store.GetAllByPath(ctx, secretPath)
 		if err != nil {
 			return userErr(err)

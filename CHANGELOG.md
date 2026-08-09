@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Added
+- **`run --config-only` (`-C`) and `run --secrets-only` (`-S`)** populate one
+  half of the declaration and skip the other entirely — the skipped half is
+  never read, prompted for, or written. `secret.required` is per-service, so a
+  stage whose secrets are supplied elsewhere (a per-PR `ExternalSecret`, an
+  in-cluster generator) previously had to choose between `|| true` — which
+  also swallows auth failures — and seeding placeholder secrets nobody reads.
+  The skip is logged explicitly so a CI log shows it was deliberate. The two
+  flags cannot be combined (usage error, exit 1), and a restricted run against
+  a declaration with no such block is an error rather than a silent exit 0.
+  Under `--removing` the prune follows the same scope: `--config-only
+  --removing` prunes orphan configs and leaves secrets untouched. A restricted
+  prune refuses when `config.path` and `secret.path` are identical, since an
+  orphan under a shared path cannot be attributed to either half.
+
 ### Fixed
 - **`clean-up` (and `run --removing`) no longer deletes stage-override-only
   config keys.** Keys declared only under `config.<stage>` are written by
