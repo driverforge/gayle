@@ -1,0 +1,30 @@
+# CI for gayle.
+#
+# Five checks — gofmt, vet, build, test, govulncheck — all of which reproduce
+# locally. See .buildkite/steps/run-ci.sh for the commands.
+#
+# Releases are cut from GitHub Actions and stay there: the release attaches
+# build provenance, which is issued by GitHub and cannot be produced elsewhere.
+
+agents:
+  queue: linux-small
+
+steps:
+  - label: ':go: CI'
+    key: ci
+    notify:
+      - github_commit_status:
+          context: buildkite/ci
+    timeout_in_minutes: 15
+    plugins:
+      - docker#v5.11.0:
+          # Pinned to the toolchain in go.mod, so a pull request fails for its
+          # own change rather than for a toolchain that moved underneath it.
+          image: golang:1.25.8
+          environment:
+            # The agent's home is not the container's. Without these Go has
+            # nowhere writable to cache and fails before compiling anything.
+            - HOME=/tmp
+            - GOCACHE=/tmp/go-build
+            - GOMODCACHE=/tmp/go-mod
+    command: .buildkite/steps/run-ci.sh
