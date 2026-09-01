@@ -1,0 +1,77 @@
+# CI for gayle.
+#
+# Four independent steps rather than one. They answer different questions, and
+# splitting them means a failure names itself in the pull request without
+# opening a log — and, more usefully, that one failure never hides another. A
+# new vulnerability advisory and a broken test are unrelated events; when they
+# shared a step, whichever ran first was the only one you heard about.
+#
+# They run concurrently, so the build is as slow as its slowest step rather than
+# the sum of all four.
+#
+# Every task reproduces locally; see .buildkite/steps/run-go.sh.
+#
+# Releases are cut from GitHub Actions and stay there: the release attaches
+# build provenance, which is issued by GitHub and cannot be produced elsewhere.
+
+agents:
+  queue: linux-small
+
+steps:
+  - label: ':mag: Lint'
+    key: lint
+    notify:
+      - github_commit_status:
+          context: buildkite/lint
+    timeout_in_minutes: 10
+    # THIS PIN IS THE TOOLCHAIN. Not go.mod's `toolchain` directive.
+    #
+    # The official golang images set GOTOOLCHAIN=local, which makes Go ignore
+    # that directive entirely and build with whatever the image ships. go.mod
+    # has asked for a newer toolchain than this image for some time and has been
+    # quietly overruled — so `go 1.25.8` in go.mod is a floor for consumers, and
+    # this line is what actually compiles.
+    #
+    # That makes it a security input: govulncheck reports standard library
+    # advisories against the version that did the build, so bumping this is how
+    # they get fixed. Raising the directive alone changes nothing here.
+    #
+    # Anchored here and aliased below rather than declared as a top-level key,
+    # which is not part of the pipeline schema.
+    plugins: &go
+      - docker#v5.11.0:
+          image: golang:1.26.6
+          environment:
+            # The agent's home is not the container's. Without these Go has
+            # nowhere writable to cache and fails before compiling anything.
+            - HOME=/tmp
+            - GOCACHE=/tmp/go-build
+            - GOMODCACHE=/tmp/go-mod
+    command: .buildkite/steps/run-go.sh lint
+
+  - label: ':hammer: Build'
+    key: build
+    notify:
+      - github_commit_status:
+          context: buildkite/build
+    timeout_in_minutes: 10
+    plugins: *go
+    command: .buildkite/steps/run-go.sh build
+
+  - label: ':go: Test'
+    key: test
+    notify:
+      - github_commit_status:
+          context: buildkite/test
+    timeout_in_minutes: 15
+    plugins: *go
+    command: .buildkite/steps/run-go.sh test
+
+  - label: ':lock: Vulnerabilities'
+    key: vuln
+    notify:
+      - github_commit_status:
+          context: buildkite/vuln
+    timeout_in_minutes: 10
+    plugins: *go
+    command: .buildkite/steps/run-go.sh vuln
