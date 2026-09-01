@@ -14,8 +14,11 @@
 # Releases are cut from GitHub Actions and stay there: the release attaches
 # build provenance, which is issued by GitHub and cannot be produced elsewhere.
 
+# Named rather than left to the cluster default, so a build log says on sight
+# which queue ran it — and `-public` is the part that matters: this queue holds
+# no credentials, which is what makes it safe to run pull requests from forks.
 agents:
-  queue: linux-small
+  queue: linux-small-public
 
 steps:
   - label: ':mag: Lint'
