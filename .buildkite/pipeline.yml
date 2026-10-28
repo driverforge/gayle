@@ -43,7 +43,7 @@ steps:
     # which is not part of the pipeline schema.
     plugins: &go
       - docker#v5.11.0:
-          image: golang:1.26.6
+          image: golang:1.26.10
           environment:
             # The agent's home is not the container's. Without these Go has
             # nowhere writable to cache and fails before compiling anything.
